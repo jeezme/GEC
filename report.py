@@ -32,7 +32,7 @@ def _img(src: str, width: str, extra: str = "") -> str:
 
 def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
     pct = _pct(team.get("amount", 0), team.get("objectif", 1) or 1)
-    logo = team.get("logo_url", "")
+    logo = team.get("logo_base64") or team.get("logo_url", "")
     logo_size = {"lg": "100", "md": "64", "sm": "40"}.get(size, "64")
     gold = (
         ' style="background:linear-gradient(135deg,#fffbea 0%,#fff8e1 60%);'
@@ -54,7 +54,7 @@ def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
 
 def _skier_row_html(skier: dict, rank: int, show_delta: bool = False,
                     show_badge: bool = True, show_team: bool = False) -> str:
-    photo = skier.get("photo_url", "")
+    photo = skier.get("photo_base64") or skier.get("photo_url", "")
     first = skier.get("first_name", "")
     last = skier.get("last_name", "").upper()
     name = (first + " " + last).strip()

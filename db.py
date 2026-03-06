@@ -26,16 +26,29 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 team_slug TEXT, team_name TEXT, logo_url TEXT,
                 team_type TEXT, dept TEXT, amount INTEGER,
-                objectif INTEGER, scraped_at TEXT
+                objectif INTEGER, scraped_at TEXT, logo_base64 TEXT
             );
             CREATE TABLE IF NOT EXISTS skier_snapshots (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 skier_url TEXT, first_name TEXT, last_name TEXT,
                 photo_url TEXT, team_slug TEXT, gender TEXT,
-                amount INTEGER, scraped_at TEXT
+                amount INTEGER, scraped_at TEXT, photo_base64 TEXT
             );
         """)
 
+
+
+def _migrate_db():
+    """Ajoute les colonnes base64 si absentes (migration schema)."""
+    with _conn() as con:
+        for sql in [
+            "ALTER TABLE team_snapshots ADD COLUMN logo_base64 TEXT",
+            "ALTER TABLE skier_snapshots ADD COLUMN photo_base64 TEXT",
+        ]:
+            try:
+                con.execute(sql)
+            except Exception:
+                pass  # colonne deja existante
 
 def insert_global(total_dons: int, total_objectif: int, scraped_at: str):
     with _conn() as con:
@@ -45,23 +58,23 @@ def insert_global(total_dons: int, total_objectif: int, scraped_at: str):
         )
 
 
-def insert_team(team_slug, team_name, logo_url, team_type, dept, amount, objectif, scraped_at):
+def insert_team(team_slug, team_name, logo_url, logo_base64, team_type, dept, amount, objectif, scraped_at):
     with _conn() as con:
         con.execute(
             "INSERT INTO team_snapshots "
-            "(team_slug, team_name, logo_url, team_type, dept, amount, objectif, scraped_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (team_slug, team_name, logo_url, team_type, dept, amount, objectif, scraped_at)
+            "(team_slug, team_name, logo_url, logo_base64, team_type, dept, amount, objectif, scraped_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (team_slug, team_name, logo_url, logo_base64, team_type, dept, amount, objectif, scraped_at)
         )
 
 
-def insert_skier(skier_url, first_name, last_name, photo_url, team_slug, gender, amount, scraped_at):
+def insert_skier(skier_url, first_name, last_name, photo_url, photo_base64, team_slug, gender, amount, scraped_at):
     with _conn() as con:
         con.execute(
             "INSERT INTO skier_snapshots "
-            "(skier_url, first_name, last_name, photo_url, team_slug, gender, amount, scraped_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (skier_url, first_name, last_name, photo_url, team_slug, gender, amount, scraped_at)
+            "(skier_url, first_name, last_name, photo_url, photo_base64, team_slug, gender, amount, scraped_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (skier_url, first_name, last_name, photo_url, photo_base64, team_slug, gender, amount, scraped_at)
         )
 
 

@@ -1,3 +1,4 @@
+import base64
 import logging
 import re
 import time
@@ -19,7 +20,6 @@ HEADERS = {
 
 
 def _parse_amount(text: str) -> int:
-    """Convertit '102 €' ou '€ 102' en int 102."""
     cleaned = re.sub(r"[^\d]", "", text)
     return int(cleaned) if cleaned else 0
 
@@ -28,8 +28,18 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def image_to_base64(url: str) -> str | None:
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=10)
+        b64 = base64.b64encode(resp.content).decode("utf-8")
+        ext = url.split(".")[-1].split("?")[0].lower()
+        mime = "image/jpeg" if ext in ["jpg", "jpeg"] else "image/png"
+        return f"data:{mime};base64,{b64}"
+    except Exception:
+        return None
+
+
 def scrape_global(scraped_at: str) -> dict:
-    """Scrappe la page principale et insere un snapshot global."""
     log.info("Scraping page principale %s", MAIN_URL)
     resp = requests.get(MAIN_URL, headers=HEADERS, timeout=15)
     resp.raise_for_status()
@@ -47,16 +57,15 @@ def scrape_global(scraped_at: str) -> dict:
         total_objectif = _parse_amount(objectif_tag.get_text())
 
     db.insert_global(total_dons, total_objectif, scraped_at)
-    log.info("Global: %d / %d €", total_dons, total_objectif)
+    log.info("Global: %d / %d", total_dons, total_objectif)
     return {"total_dons": total_dons, "total_objectif": total_objectif}
 
 
 def scrape_team(team: dict, scraped_at: str):
-    """Scrappe une page equipe et insere les snapshots."""
     slug = team["slug"]
     dept = team["dept"]
     url = f"{MAIN_URL}/equipe/{slug}"
-    log.info("Scraping equipe %s → %s", slug, url)
+    log.info("Scraping equipe %s", slug)
 
     try:
         resp = requests.get(url, headers=HEADERS, timeout=15)
@@ -72,6 +81,7 @@ def scrape_team(team: dict, scraped_at: str):
     logo_url = logo_tag["src"] if logo_tag and logo_tag.get("src") else ""
     if logo_url and logo_url.startswith("/"):
         logo_url = MAIN_URL + logo_url
+    logo_base64 = image_to_base64(logo_url) if logo_url else None
 
     # Nom equipe
     name_tag = soup.select_one("h3.logo-text")
@@ -85,13 +95,12 @@ def scrape_team(team: dict, scraped_at: str):
     amount_tag = soup.select_one("h3.dont-text")
     amount = _parse_amount(amount_tag.get_text()) if amount_tag else 0
 
-    # Objectif equipe (troisieme h3.objectif-text)
+    # Objectif
     objectif_tags = soup.select("h3.objectif-text")
     objectif = _parse_amount(objectif_tags[-1].get_text()) if objectif_tags else 0
 
-    db.insert_team(slug, team_name, logo_url, team_type, dept, amount, objectif, scraped_at)
-    log.info("  %s : %d / %d €  (%d skieurs a scraper)", team_name, amount, objectif,
-             len(soup.select("div.list-participant-item")))
+    db.insert_team(slug, team_name, logo_url, logo_base64, team_type, dept, amount, objectif, scraped_at)
+    log.info("  %s : %d / %d", team_name, amount, objectif)
 
     # Skieurs
     for item in soup.select("div.list-participant-item"):
@@ -117,6 +126,7 @@ def _scrape_skier_item(item, team_slug: str, scraped_at: str):
     photo_url = photo_tag["src"] if photo_tag and photo_tag.get("src") else ""
     if photo_url and photo_url.startswith("/"):
         photo_url = MAIN_URL + photo_url
+    photo_base64 = image_to_base64(photo_url) if photo_url else None
 
     # Montant
     amount_tag = item.select_one("div.participant-item-total-dont")
@@ -128,11 +138,11 @@ def _scrape_skier_item(item, team_slug: str, scraped_at: str):
     gender = detect_gender(first_name) if first_name else "M"
 
     if skier_url or first_name:
-        db.insert_skier(skier_url, first_name, last_name, photo_url, team_slug, gender, amount, scraped_at)
+        db.insert_skier(skier_url, first_name, last_name, photo_url, photo_base64,
+                        team_slug, gender, amount, scraped_at)
 
 
 def scrape_all():
-    """Point d'entree principal : scrappe tout et insere en base."""
     scraped_at = _now_iso()
     log.info("Debut scraping global a %s", scraped_at)
     scrape_global(scraped_at)
@@ -141,4 +151,4 @@ def scrape_all():
     for team in TEAMS:
         scrape_team(team, scraped_at)
 
-    log.info("Scraping termine — %d equipes traitees", len(TEAMS))
+    log.info("Scraping termine - %d equipes traitees", len(TEAMS))
