@@ -7,7 +7,7 @@ from datetime import date, datetime
 from flask import Flask, jsonify, request
 
 import db
-from config import DUEL_TEAM_1, DUEL_TEAM_2, TEAMS as _CONFIG_TEAMS
+from config import DUEL_TEAM_1, DUEL_TEAM_2, TEAMS as _CONFIG_TEAMS, DUEL_DEPT_1, DUEL_DEPT_2, DUEL_DEPT_1_NAME, DUEL_DEPT_2_NAME
 from gender import detect_gender as _detect_gender, load_overrides as _load_gender_overrides
 
 app = Flask(__name__)
@@ -207,8 +207,8 @@ def _build_html() -> str:
     )
 
     _dept_by_slug = {c["slug"]: c["dept"] for c in _CONFIG_TEAMS}
-    teams_73 = [t for t in teams if _dept_by_slug.get(t.get("team_slug", "")) == "73"]
-    teams_74 = [t for t in teams if _dept_by_slug.get(t.get("team_slug", "")) == "74"]
+    teams_73 = [t for t in teams if _dept_by_slug.get(t.get("team_slug", "")) == DUEL_DEPT_1]
+    teams_74 = [t for t in teams if _dept_by_slug.get(t.get("team_slug", "")) == DUEL_DEPT_2]
     total_73 = sum(t["amount"] for t in teams_73)
     total_74 = sum(t["amount"] for t in teams_74)
     total_depts = total_73 + total_74 or 1
@@ -225,7 +225,7 @@ def _build_html() -> str:
     card3_body = (
         '<div class="versus-wrap">'
         '<div class="versus-side">'
-        '<div class="side-title" style="color:#e67e22">73 SAVOIE</div>'
+        '<div class="side-title" style="color:#e67e22">' + DUEL_DEPT_1 + ' ' + DUEL_DEPT_1_NAME.upper() + '</div>'
         '<div class="side-total">' + _fmt(total_73) + '</div>'
         '<div class="side-stats">' + str(len(teams_73)) + ' équipes</div>'
         '<div class="logos-mosaic">' + logos_73 + '</div></div>'
@@ -238,7 +238,7 @@ def _build_html() -> str:
         '<span style="color:#e67e22">' + str(pct_73) + '%</span> / '
         '<span style="color:#27ae60">' + str(pct_74) + '%</span></div></div>'
         '<div class="versus-side">'
-        '<div class="side-title" style="color:#27ae60">74 HAUTE-SAVOIE</div>'
+        '<div class="side-title" style="color:#27ae60">' + DUEL_DEPT_2 + ' ' + DUEL_DEPT_2_NAME.upper() + '</div>'
         '<div class="side-total">' + _fmt(total_74) + '</div>'
         '<div class="side-stats">' + str(len(teams_74)) + ' équipes</div>'
         '<div class="logos-mosaic">' + logos_74 + '</div></div></div>'
@@ -527,7 +527,7 @@ def _build_html() -> str:
               "top6-equipes-" + str(today) + ".png", generated_at),
         _card("card2", "⚡ FILLES vs GARCONS", card2_body,
               "filles-garcons-" + str(today) + ".png", generated_at),
-        _card("card3", "SAVOIE 73 vs HAUTE-SAVOIE 74", card3_body,
+        _card("card3", DUEL_DEPT_1_NAME.upper() + " " + DUEL_DEPT_1 + " vs " + DUEL_DEPT_2_NAME.upper() + " " + DUEL_DEPT_2, card3_body,
               "depts-" + str(today) + ".png", generated_at),
         _card("card4", "DUEL : " + n1 + " vs " + n2, card4_body,
               "duel-" + str(today) + ".png", generated_at),

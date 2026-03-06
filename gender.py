@@ -31,10 +31,6 @@ def detect_gender(first_name: str, overrides: dict | None = None) -> str:
     if result in ("female", "mostly_female"):
         return "F"
 
-    if _ov.get(name) not in ("M", "F"):
-        _ov[name] = "?"
-        _save_overrides({name: "?"})
-
     return "M"
 
 
@@ -55,15 +51,3 @@ def _load_overrides() -> dict:
         with open(OVERRIDES_FILE, encoding="utf-8") as f:
             return json.load(f)
     return {}
-
-
-def _save_overrides(new_entries: dict):
-    existing = _load_overrides()
-    changed = False
-    for name, value in new_entries.items():
-        if name not in existing:
-            existing[name] = value
-            changed = True
-    if changed:
-        with open(OVERRIDES_FILE, "w", encoding="utf-8") as f:
-            json.dump(existing, f, ensure_ascii=False, indent=2, sort_keys=True)
