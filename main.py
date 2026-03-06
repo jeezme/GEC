@@ -308,6 +308,62 @@ def _build_html() -> str:
     )
     card6_body = '<div class="skiers-list">' + rows6 + '</div>'
 
+    # CARD 7 - Top 20 skieurs (total)
+    top20_sk = skiers[:20]
+    for s in top20_sk:
+        s["team_name"] = teams_by_slug.get(s.get("team_slug", ""), {}).get("team_name", "")
+    rows7 = ""
+    for i, s in enumerate(top20_sk):
+        row = _skier_row_html(s, i + 1, show_badge=False, show_team=True)
+        if i == 0:
+            row = '<div class="skier-gold">' + row + '</div>'
+        rows7 += row
+    card7_body = '<div class="skiers-list">' + rows7 + '</div>'
+
+    # CARD 8 - Objectifs des equipes
+    teams_sorted_pct = sorted(
+        teams, key=lambda t: _pct(t.get("amount", 0), t.get("objectif", 1) or 1), reverse=True
+    )
+    rows8 = ""
+    for t in teams_sorted_pct:
+        pct_t = _pct(t.get("amount", 0), t.get("objectif", 1) or 1)
+        bar_col = "#27ae60" if pct_t >= 100 else ("#f39c12" if pct_t >= 50 else "#e74c3c")
+        logo_td = _img(t.get("logo_base64") or t.get("logo_url", ""), "32")
+        rows8 += (
+            '<tr>'
+            '<td>' + logo_td + '</td>'
+            '<td style="font-weight:700">' + t.get("team_name", "") + '</td>'
+            '<td style="color:#48cfad;font-weight:700">' + _fmt(t.get("amount", 0)) + '</td>'
+            '<td style="color:#888">' + _fmt(t.get("objectif", 0)) + '</td>'
+            '<td style="width:160px">'
+            '<div class="progress-bar-wrap" style="height:10px;margin:0">'
+            '<div style="height:100%;width:' + str(min(pct_t, 100)) + '%;background:' + bar_col + ';border-radius:4px"></div>'
+            '</div>'
+            '<div style="font-size:.8em;color:' + bar_col + ';font-weight:700">' + str(pct_t) + '%</div>'
+            '</td>'
+            '</tr>'
+        )
+    total_all = sum(t.get("amount", 0) for t in teams)
+    total_obj_all = sum(t.get("objectif", 0) for t in teams)
+    pct_all = _pct(total_all, total_obj_all or 1)
+    bar_col_all = "#27ae60" if pct_all >= 100 else ("#f39c12" if pct_all >= 50 else "#e74c3c")
+    card8_body = (
+        '<table class="rank-table">'
+        '<thead><tr><th></th><th>Equipe</th><th>Collecté</th><th>Objectif</th><th>Progression</th></tr></thead>'
+        '<tbody>' + rows8 + '</tbody></table>'
+        '<div class="obj-summary">'
+        '<div class="obj-summary-row"><span>Total collecté :</span>'
+        '<span style="color:#48cfad;font-weight:900">' + _fmt(total_all) + '</span></div>'
+        '<div class="obj-summary-row"><span>Objectif total :</span>'
+        '<span style="color:#888">' + _fmt(total_obj_all) + '</span></div>'
+        '<div class="progress-bar-wrap" style="height:14px;margin:12px 0 6px">'
+        '<div style="height:100%;width:' + str(min(pct_all, 100)) + '%;background:' + bar_col_all + ';border-radius:4px"></div>'
+        '</div>'
+        '<div style="font-size:1.1em;font-weight:700;color:' + bar_col_all + '">'
+        + str(pct_all) + "% de l'objectif global</div>"
+        '</div>'
+    )
+
     if recent_dons:
         don_items = ""
         for d in recent_dons:
@@ -415,6 +471,9 @@ def _build_html() -> str:
         ".footer{max-width:800px;margin:0 auto;padding:24px 0;text-align:center;color:#888}"
         ".footer-meta{font-size:.9em}"
         ".skiers-list{max-height:600px}.top3 .skier-row{padding:4px 0}"
+        ".skier-gold{background:linear-gradient(90deg,#fffbea,transparent);border-radius:8px;padding:4px}"
+        ".obj-summary{margin-top:16px;padding:16px;background:#f8f9fc;border-radius:8px;border:1px solid #e0e4ed}"
+        ".obj-summary-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:1em}"
         "@media(max-width:900px){"
             ".main-content{margin-right:0}.sidebar{display:none}"
             ".versus-wrap,.duel-wrap{flex-direction:column}"
@@ -470,6 +529,10 @@ def _build_html() -> str:
               "24h-equipes-" + str(today) + ".png", generated_at),
         _card("card6", "MEILLEURS SKIEURS 24H", card6_body,
               "24h-skieurs-" + str(today) + ".png", generated_at),
+        _card("card7", chr(127935) + " TOP 20 SKIEURS", card7_body,
+              "top20-skieurs-" + str(today) + ".png", generated_at),
+        _card("card8", chr(127919) + " OBJECTIFS DES " + chr(201) + "QUIPES", card8_body,
+              "objectifs-equipes-" + str(today) + ".png", generated_at),
         footer,
         "  </div>",
         '  <script>' + js + '</script>',
