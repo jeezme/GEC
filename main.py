@@ -256,7 +256,7 @@ def _build_html() -> str:
             return '<div class="duel-half">Equipe introuvable</div>'
         pct = _pct(team["amount"], team.get("objectif", 1) or 1)
         glow = " duel-leading" if leading else ""
-        top3 = "".join(_skier_row_html(s, i + 1) for i, s in enumerate(side_skiers[:3]))
+        top3 = "".join(_skier_row_html(s, i + 1, show_badge=False) for i, s in enumerate(side_skiers[:3]))
         logo_img = _img(team.get("logo_url", ""), "80")
         return (
             '<div class="duel-half' + glow + '">' + logo_img
