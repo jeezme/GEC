@@ -108,7 +108,6 @@ def _card(cid: str, title: str, body: str, save_filename: str, generated_at: str
         '<div class="card" id="' + cid + '">'
         '<div class="card-header">'
         '<h2>' + title + '</h2>'
-        '<div class="card-subtitle">Données au ' + generated_at + '</div>'
         '</div>'
         '<div class="card-body">' + body + '</div>'
         + _save_btn(cid, save_filename)
@@ -492,32 +491,8 @@ def _build_html() -> str:
         "function saveCard(btn,cardId,filename){"
         "var el=document.getElementById(cardId);"
         "btn.disabled=true;btn.textContent='Traitement...';"
-        "if(cardId==='card1'){"
-        "el.scrollIntoView({block:'nearest'});"
-        "setTimeout(function(){"
-        "var opts={scale:2,useCORS:true,allowTaint:true,foreignObjectRendering:false,"
-        "imageTimeout:15000,removeContainer:true,backgroundColor:'#ffffff'};"
         "btn.style.display='none';"
-        "html2canvas(el,opts).then(function(canvas){"
-        "var link=document.createElement('a');"
-        "link.download=filename;link.href=canvas.toDataURL('image/png');link.click();"
-        "btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.display='block';"
-        "}).catch(function(err){"
-        "var clone=el.cloneNode(true);"
-        "clone.style.position='absolute';clone.style.left='-9999px';clone.style.width='800px';"
-        "document.body.appendChild(clone);"
-        "html2canvas(clone,opts).then(function(canvas){"
-        "document.body.removeChild(clone);"
-        "var link=document.createElement('a');"
-        "link.download=filename;link.href=canvas.toDataURL('image/png');link.click();"
-        "btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.display='block';"
-        "}).catch(function(err2){"
-        "document.body.removeChild(clone);"
-        "console.error(err2);btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.display='block';"
-        "});"
-        "});},2000);"
-        "}else{"
-        "btn.style.display='none';"
+        "requestAnimationFrame(function(){requestAnimationFrame(function(){"
         "html2canvas(el,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:true})"
         ".then(function(canvas){"
         "var link=document.createElement('a');"
@@ -525,7 +500,7 @@ def _build_html() -> str:
         "btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.display='block';"
         "}).catch(function(err){"
         "console.error(err);btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.display='block';"
-        "});}"
+        "});});});"
         "}"
     )
 
