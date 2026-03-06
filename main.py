@@ -325,17 +325,19 @@ def _build_html() -> str:
         rows7 += row
     card7_body = '<div class="skiers-list">' + rows7 + '</div>'
 
-    # CARD 8 - Objectifs des equipes
-    teams_sorted_pct = sorted(
-        teams, key=lambda t: _pct(t.get("amount", 0), t.get("objectif", 1) or 1), reverse=True
+    # CARD 8 - Classement des equipes par montant collecte
+    teams_sorted_amount = sorted(
+        teams, key=lambda t: t.get("amount", 0), reverse=True
     )
     rows8 = ""
-    for t in teams_sorted_pct:
+    for i, t in enumerate(teams_sorted_amount, 1):
         pct_t = _pct(t.get("amount", 0), t.get("objectif", 1) or 1)
         bar_col = "#27ae60" if pct_t >= 100 else ("#f39c12" if pct_t >= 50 else "#e74c3c")
         logo_td = _img(t.get("logo_base64") or t.get("logo_url", ""), "32")
+        medal_td = _medal(i) if i <= 3 else '<span style="color:#888;font-size:.9em">' + str(i) + '</span>'
         rows8 += (
             '<tr>'
+            '<td style="text-align:center;font-size:1.2em;width:36px">' + medal_td + '</td>'
             '<td>' + logo_td + '</td>'
             '<td style="font-weight:700">' + t.get("team_name", "") + '</td>'
             '<td style="color:#48cfad;font-weight:700">' + _fmt(t.get("amount", 0)) + '</td>'
@@ -354,7 +356,7 @@ def _build_html() -> str:
     bar_col_all = "#27ae60" if pct_all >= 100 else ("#f39c12" if pct_all >= 50 else "#e74c3c")
     card8_body = (
         '<table class="rank-table">'
-        '<thead><tr><th></th><th>Equipe</th><th>Collecté</th><th>Objectif</th><th>Progression</th></tr></thead>'
+        '<thead><tr><th>#</th><th></th><th>Equipe</th><th>Collecté</th><th>Objectif</th><th>Progression</th></tr></thead>'
         '<tbody>' + rows8 + '</tbody></table>'
         '<div class="obj-summary">'
         '<div class="obj-summary-row"><span>Total collecté :</span>'
@@ -556,8 +558,8 @@ def _build_html() -> str:
               "24h-skieurs-" + str(today) + ".png", generated_at),
         _card("card7", chr(127935) + " TOP 20 SKIEURS", card7_body,
               "top20-skieurs-" + str(today) + ".png", generated_at),
-        _card("card8", chr(127919) + " OBJECTIFS DES " + chr(201) + "QUIPES", card8_body,
-              "objectifs-equipes-" + str(today) + ".png", generated_at),
+        _card("card8", chr(127942) + " CLASSEMENT DES " + chr(201) + "QUIPES", card8_body,
+              "classement-equipes-" + str(today) + ".png", generated_at),
         footer,
         "  </div>",
         '  <script>' + js + '</script>',
