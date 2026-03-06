@@ -493,7 +493,7 @@ def _build_html() -> str:
         "var el=document.getElementById(cardId);"
         "btn.disabled=true;btn.textContent='Traitement...';"
         "if(cardId==='card1'){"
-        "el.style.display='none';el.offsetHeight;el.style.display='block';"
+        "el.scrollIntoView({block:'nearest'});"
         "setTimeout(function(){"
         "var opts={scale:2,useCORS:true,allowTaint:true,foreignObjectRendering:false,"
         "imageTimeout:15000,removeContainer:true,backgroundColor:'#ffffff'};"
