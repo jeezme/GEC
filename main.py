@@ -495,22 +495,6 @@ def _build_html() -> str:
         "btn.disabled=true;btn.textContent='Traitement...';"
         "btn.style.visibility='hidden';"
         "requestAnimationFrame(function(){requestAnimationFrame(function(){"
-        "if(cardId==='card1'){"
-        "var clone=el.cloneNode(true);"
-        "clone.style.cssText='position:absolute;left:-9999px;top:0;width:800px';"
-        "var cb=clone.querySelector('.save-btn');if(cb)cb.style.visibility='hidden';"
-        "document.body.appendChild(clone);"
-        "html2canvas(clone,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:true})"
-        ".then(function(canvas){"
-        "document.body.removeChild(clone);"
-        "var link=document.createElement('a');"
-        "link.download=filename;link.href=canvas.toDataURL('image/png');link.click();"
-        "btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.visibility='visible';"
-        "}).catch(function(err){"
-        "document.body.removeChild(clone);"
-        "console.error(err);btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.visibility='visible';"
-        "});"
-        "}else{"
         "html2canvas(el,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:true})"
         ".then(function(canvas){"
         "var link=document.createElement('a');"
@@ -518,7 +502,7 @@ def _build_html() -> str:
         "btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.visibility='visible';"
         "}).catch(function(err){"
         "console.error(err);btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.visibility='visible';"
-        "});}"
+        "});"
         "});});"
         "}"
     )
@@ -546,20 +530,18 @@ def _build_html() -> str:
         global_banner,
         _card("card5", "DONS DES DERNIÈRES 24H", card5_body,
               "24h-equipes-" + str(today) + ".png", generated_at),
-        _card("card1", "🏆 CLASSEMENT ÉQUIPES", card1_body,
-              "top6-equipes-" + str(today) + ".png", generated_at),
+        _card("card8", chr(127942) + " CLASSEMENT DES " + chr(201) + "QUIPES", card8_body,
+              "classement-equipes-" + str(today) + ".png", generated_at),
+        _card("card4", "DUEL : " + n1 + " vs " + n2, card4_body,
+              "duel-" + str(today) + ".png", generated_at),
         _card("card2", "⚡ FILLES vs GARCONS", card2_body,
               "filles-garcons-" + str(today) + ".png", generated_at),
         _card("card3", DUEL_DEPT_1_NAME.upper() + " " + DUEL_DEPT_1 + " vs " + DUEL_DEPT_2_NAME.upper() + " " + DUEL_DEPT_2, card3_body,
               "depts-" + str(today) + ".png", generated_at),
-        _card("card4", "DUEL : " + n1 + " vs " + n2, card4_body,
-              "duel-" + str(today) + ".png", generated_at),
         _card("card6", "MEILLEURS SKIEURS 24H", card6_body,
               "24h-skieurs-" + str(today) + ".png", generated_at),
         _card("card7", chr(127935) + " TOP 20 SKIEURS", card7_body,
               "top20-skieurs-" + str(today) + ".png", generated_at),
-        _card("card8", chr(127942) + " CLASSEMENT DES " + chr(201) + "QUIPES", card8_body,
-              "classement-equipes-" + str(today) + ".png", generated_at),
         footer,
         "  </div>",
         '  <script>' + js + '</script>',
