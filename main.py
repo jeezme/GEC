@@ -482,7 +482,7 @@ def _build_html() -> str:
         ".obj-summary{margin-top:16px;padding:16px;background:#f8f9fc;border-radius:8px;border:1px solid #e0e4ed}"
         ".obj-summary-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:1em}"
         "@media(max-width:900px){"
-            ".main-content{margin-right:0}.sidebar{display:none}"
+            ".main-content{margin-right:0}"".sidebar{position:static;width:100%;height:auto;border-left:none;border-bottom:1px solid #e0e4ed;margin-bottom:16px}"
             ".versus-wrap,.duel-wrap{flex-direction:column}"
             ".versus-center,.duel-center{width:100%;padding:8px 0}"
             ".rank-md,.rank-sm{width:100%}}"
@@ -523,11 +523,11 @@ def _build_html() -> str:
         '  <style>' + css + '</style>',
         "</head>",
         "<body>",
-        sidebar_html,
         '  <div class="main-content">',
         '  <h1>🎿 Glisse en Coeur</h1>',
         '  <p class="subtitle">Données du ' + today.strftime("%d/%m/%Y") + '</p>',
         global_banner,
+        sidebar_html,
         _card("card5", "DONS DES DERNIÈRES 24H", card5_body,
               "24h-equipes-" + str(today) + ".png", generated_at),
         _card("card8", chr(127942) + " CLASSEMENT DES " + chr(201) + "QUIPES", card8_body,
