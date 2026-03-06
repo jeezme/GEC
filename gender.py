@@ -52,6 +52,13 @@ def _load_overrides() -> dict:
     return {}
 
 
-def _save_overrides(data: dict):
-    with open(OVERRIDES_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=True)
+def _save_overrides(new_entries: dict):
+    existing = _load_overrides()
+    changed = False
+    for name, value in new_entries.items():
+        if name not in existing:
+            existing[name] = value
+            changed = True
+    if changed:
+        with open(OVERRIDES_FILE, "w", encoding="utf-8") as f:
+            json.dump(existing, f, ensure_ascii=False, indent=2, sort_keys=True)
