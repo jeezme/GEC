@@ -214,12 +214,12 @@ def _build_html() -> str:
     pct_73 = _pct(total_73, total_depts)
     pct_74 = _pct(total_74, total_depts)
     logos_73 = "".join(
-        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
-        for t in teams_73 if t.get("logo_url")
+        _img(t.get("logo_base64") or t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
+        for t in teams_73 if t.get("logo_base64") or t.get("logo_url")
     )
     logos_74 = "".join(
-        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
-        for t in teams_74 if t.get("logo_url")
+        _img(t.get("logo_base64") or t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
+        for t in teams_74 if t.get("logo_base64") or t.get("logo_url")
     )
     card3_body = (
         '<div class="versus-wrap">'
@@ -262,7 +262,7 @@ def _build_html() -> str:
         pct = _pct(team["amount"], team.get("objectif", 1) or 1)
         glow = " duel-leading" if leading else ""
         top3 = "".join(_skier_row_html(s, i + 1, show_badge=False) for i, s in enumerate(side_skiers[:3]))
-        logo_img = _img(team.get("logo_url", ""), "80")
+        logo_img = _img(team.get("logo_base64") or team.get("logo_url", ""), "80")
         return (
             '<div class="duel-half' + glow + '">' + logo_img
             + '<div class="duel-name">' + team.get("team_name", "") + '</div>'
@@ -288,7 +288,7 @@ def _build_html() -> str:
     rows5 = ""
     for i, d in enumerate(top10_teams, 1):
         t5 = teams_by_slug.get(d["team_slug"], {})
-        logo_img = _img(t5.get("logo_url", ""), "32")
+        logo_img = _img(t5.get("logo_base64") or t5.get("logo_url", ""), "32")
         trend = "↑" if d["delta_24h"] > 0 else "→"
         tc = "#48cfad" if d["delta_24h"] > 0 else "#aaa"
         rows5 += (
