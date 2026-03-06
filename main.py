@@ -77,10 +77,6 @@ if __name__ == "__main__":
 
 @app.route("/admin")
 def admin():
-    token = request.headers.get("X-Token", "")
-    if token != SECRET_TOKEN:
-        return "Unauthorized", 401
-
     import sqlite3 as _sq
     db_path = "/data/glisse.db"
     db_size = f"{os.path.getsize(db_path) / 1024 / 1024:.2f} MB" if os.path.exists(db_path) else "N/A"
