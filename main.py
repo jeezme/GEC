@@ -9,7 +9,7 @@ app = Flask(__name__)
 SECRET_TOKEN = os.environ.get("SECRET_TOKEN", "changeme")
 
 # Create directories at startup
-os.makedirs("data", exist_ok=True)
+os.makedirs("/data", exist_ok=True)
 os.makedirs("reports", exist_ok=True)
 
 log = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ def admin():
         return "Unauthorized", 401
 
     import sqlite3 as _sq
-    db_path = os.path.join("data", "glisse.db")
+    db_path = "/data/glisse.db"
     db_size = f"{os.path.getsize(db_path) / 1024 / 1024:.2f} MB" if os.path.exists(db_path) else "N/A"
 
     try:

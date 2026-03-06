@@ -2,7 +2,7 @@ import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
-DB_DIR = "data"
+DB_DIR = "/data"
 DB_PATH = os.path.join(DB_DIR, "glisse.db")
 
 

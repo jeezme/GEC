@@ -140,7 +140,7 @@ def generate_report():
     total_objectif = 1
     try:
         import sqlite3
-        con = sqlite3.connect(os.path.join("data", "glisse.db"))
+        con = sqlite3.connect("/data/glisse.db")
         con.row_factory = sqlite3.Row
         g = con.execute(
             "SELECT total_dons, total_objectif FROM global_snapshots ORDER BY scraped_at DESC LIMIT 1"
