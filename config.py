@@ -19,10 +19,12 @@ TEAMS = [
     {"slug": "bso",                             "name": "BSO",                        "dept": "73", "type": "entreprise"},
     {"slug": "polytech-annecy-chambery",        "name": "Polytech Annecy-Chambery",  "dept": "73", "type": "tribu"},
     {"slug": "polytech-annecy-chambery-2",      "name": "Polytech Annecy-Chambery 2","dept": "73", "type": "tribu"},
+    {"slug": "maped-color-peps-2",              "name": "Maped Color Peps","dept": "73", "type": "entreprise"},
+    {"slug": "maped-croc-croc-2",      "name": "Maped Croc Croc","dept": "73", "type": "entreprise"},
 ]
 
-DUEL_TEAM_1 = "polytech-annecy-chambery"
-DUEL_TEAM_2 = "polytech-annecy-chambery-2"
+DUEL_TEAM_1 = "aktid"
+DUEL_TEAM_2 = "priams-2"
 
 DUEL_DEPT_1 = "73"
 DUEL_DEPT_2 = "74"
