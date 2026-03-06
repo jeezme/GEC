@@ -9,13 +9,19 @@ _detector = gender_lib.Detector(case_sensitive=False)
 log = logging.getLogger(__name__)
 
 
-def detect_gender(first_name: str) -> str:
-    """Retourne 'M' ou 'F'. Consulte d'abord les overrides manuels."""
-    name = first_name.strip().capitalize()
+def load_overrides() -> dict:
+    return _load_overrides()
 
-    overrides = _load_overrides()
-    if name in overrides:
-        val = overrides[name]
+
+def detect_gender(first_name: str, overrides: dict | None = None) -> str:
+    name = first_name.strip().capitalize()
+    if not name:
+        return "M"
+
+    _ov = overrides if overrides is not None else _load_overrides()
+
+    if name in _ov:
+        val = _ov[name]
         if val in ("M", "F"):
             return val
 
@@ -25,15 +31,14 @@ def detect_gender(first_name: str) -> str:
     if result in ("female", "mostly_female"):
         return "F"
 
-    if name not in overrides or overrides.get(name) not in ("M", "F"):
-        overrides[name] = "?"
-        _save_overrides(overrides)
+    if _ov.get(name) not in ("M", "F"):
+        _ov[name] = "?"
+        _save_overrides({name: "?"})
 
     return "M"
 
 
 def warn_unknown_genders():
-    """Affiche dans les logs les prenoms avec genre inconnu."""
     overrides = _load_overrides()
     unknowns = [k for k, v in overrides.items() if v == "?"]
     if unknowns:

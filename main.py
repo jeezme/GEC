@@ -8,7 +8,7 @@ from flask import Flask, jsonify, request
 
 import db
 from config import DUEL_TEAM_1, DUEL_TEAM_2, TEAMS as _CONFIG_TEAMS
-from gender import detect_gender as _detect_gender
+from gender import detect_gender as _detect_gender, load_overrides as _load_gender_overrides
 
 app = Flask(__name__)
 SECRET_TOKEN = os.environ.get("SECRET_TOKEN", "changeme")
@@ -131,6 +131,10 @@ def _build_html() -> str:
 
     teams = db.get_all_latest_teams()
     skiers = db.get_all_latest_skiers()
+    _config_slugs = {t["slug"] for t in _CONFIG_TEAMS}
+    teams = [t for t in teams if t.get("team_slug") in _config_slugs]
+    skiers = [s for s in skiers if s.get("team_slug") in _config_slugs]
+    _gender_cache = _load_gender_overrides()
     teams_delta = db.get_team_24h_delta()
     skiers_delta = db.get_skiers_24h_delta()
     recent_dons = db.get_recent_dons(20)
@@ -169,8 +173,8 @@ def _build_html() -> str:
         size = "lg" if i == 1 else ("md" if i <= 3 else "sm")
         card1_body += _team_card_html(t, i, size)
 
-    girls = [s for s in skiers if _detect_gender(s.get("first_name", "")) == "F"]
-    boys = [s for s in skiers if _detect_gender(s.get("first_name", "")) == "M"]
+    girls = [s for s in skiers if _detect_gender(s.get("first_name", ""), _gender_cache) == "F"]
+    boys = [s for s in skiers if _detect_gender(s.get("first_name", ""), _gender_cache) == "M"]
     total_f = sum(s["amount"] for s in girls)
     total_m = sum(s["amount"] for s in boys)
     total_gm = total_f + total_m or 1
