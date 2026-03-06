@@ -470,7 +470,7 @@ def _build_html() -> str:
         ".don-empty{color:#888;font-style:italic}"
         ".footer{max-width:800px;margin:0 auto;padding:24px 0;text-align:center;color:#888}"
         ".footer-meta{font-size:.9em}"
-        ".skiers-list{max-height:600px}.top3 .skier-row{padding:4px 0}"
+        ".skiers-list{}.top3 .skier-row{padding:4px 0}"
         ".skier-gold{background:linear-gradient(90deg,#fffbea,transparent);border-radius:8px;padding:4px}"
         ".obj-summary{margin-top:16px;padding:16px;background:#f8f9fc;border-radius:8px;border:1px solid #e0e4ed}"
         ".obj-summary-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:1em}"
