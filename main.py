@@ -7,7 +7,7 @@ from datetime import date, datetime
 from flask import Flask, jsonify, request
 
 import db
-from config import DUEL_TEAM_1, DUEL_TEAM_2
+from config import DUEL_TEAM_1, DUEL_TEAM_2, TEAMS as _CONFIG_TEAMS
 
 app = Flask(__name__)
 SECRET_TOKEN = os.environ.get("SECRET_TOKEN", "changeme")
@@ -201,8 +201,9 @@ def _build_html() -> str:
         '<div class="top3">' + top3_m + '</div></div></div>'
     )
 
-    teams_73 = [t for t in teams if t.get("dept") == "73"]
-    teams_74 = [t for t in teams if t.get("dept") == "74"]
+    _dept_by_slug = {c["slug"]: c["dept"] for c in _CONFIG_TEAMS}
+    teams_73 = [t for t in teams if _dept_by_slug.get(t.get("team_slug", "")) == "73"]
+    teams_74 = [t for t in teams if _dept_by_slug.get(t.get("team_slug", "")) == "74"]
     total_73 = sum(t["amount"] for t in teams_73)
     total_74 = sum(t["amount"] for t in teams_74)
     total_depts = total_73 + total_74 or 1
