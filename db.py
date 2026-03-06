@@ -139,6 +139,16 @@ def get_team_24h_delta() -> list[dict]:
             (target_iso, win_start, win_end)
         ).fetchall()
 
+        first_rows = con.execute("""
+            SELECT ts.team_slug, ts.amount FROM team_snapshots ts
+            INNER JOIN (
+                SELECT team_slug, MIN(scraped_at) AS min_at
+                FROM team_snapshots GROUP BY team_slug
+            ) l ON ts.team_slug = l.team_slug AND ts.scraped_at = l.min_at
+        """).fetchall()
+
+    first_snap = {r["team_slug"]: r["amount"] for r in first_rows}
+
     baseline = {}
     for r in baseline_rows:
         slug = r["team_slug"]
@@ -147,7 +157,7 @@ def get_team_24h_delta() -> list[dict]:
 
     results = []
     for slug, current in latest.items():
-        base = baseline[slug]["amount"] if slug in baseline else current
+        base = baseline[slug]["amount"] if slug in baseline else first_snap.get(slug, current)
         results.append({"team_slug": slug, "delta_24h": current - base, "amount": current})
     results.sort(key=lambda x: x["delta_24h"], reverse=True)
     return results
@@ -177,6 +187,16 @@ def get_skiers_24h_delta() -> list[dict]:
             (target_iso, win_start, win_end)
         ).fetchall()
 
+        first_rows = con.execute("""
+            SELECT ss.skier_url, ss.amount FROM skier_snapshots ss
+            INNER JOIN (
+                SELECT skier_url, MIN(scraped_at) AS min_at
+                FROM skier_snapshots GROUP BY skier_url
+            ) l ON ss.skier_url = l.skier_url AND ss.scraped_at = l.min_at
+        """).fetchall()
+
+    first_snap = {r["skier_url"]: r["amount"] for r in first_rows}
+
     baseline = {}
     for r in baseline_rows:
         url = r["skier_url"]
@@ -185,7 +205,7 @@ def get_skiers_24h_delta() -> list[dict]:
 
     results = []
     for url, skier in latest.items():
-        base = baseline[url]["amount"] if url in baseline else skier["amount"]
+        base = baseline[url]["amount"] if url in baseline else first_snap.get(url, skier["amount"])
         entry = dict(skier)
         entry["delta_24h"] = skier["amount"] - base
         results.append(entry)
