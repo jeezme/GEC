@@ -8,6 +8,7 @@ from flask import Flask, jsonify, request
 
 import db
 from config import DUEL_TEAM_1, DUEL_TEAM_2, TEAMS as _CONFIG_TEAMS
+from gender import detect_gender as _detect_gender
 
 app = Flask(__name__)
 SECRET_TOKEN = os.environ.get("SECRET_TOKEN", "changeme")
@@ -168,8 +169,8 @@ def _build_html() -> str:
         size = "lg" if i == 1 else ("md" if i <= 3 else "sm")
         card1_body += _team_card_html(t, i, size)
 
-    girls = [s for s in skiers if s.get("gender") == "F"]
-    boys = [s for s in skiers if s.get("gender") == "M"]
+    girls = [s for s in skiers if _detect_gender(s.get("first_name", "")) == "F"]
+    boys = [s for s in skiers if _detect_gender(s.get("first_name", "")) == "M"]
     total_f = sum(s["amount"] for s in girls)
     total_m = sum(s["amount"] for s in boys)
     total_gm = total_f + total_m or 1
