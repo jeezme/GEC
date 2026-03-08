@@ -220,7 +220,10 @@ def purge_old_snapshots(hours: int = 36) -> dict:
         g = con.execute("DELETE FROM global_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
         t = con.execute("DELETE FROM team_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
         s = con.execute("DELETE FROM skier_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
-        con.execute("VACUUM")  # libère l'espace disque réel après DELETE
+    # VACUUM doit être hors transaction
+    con2 = _conn()
+    con2.execute("VACUUM")
+    con2.close()
     return {"global": g, "teams": t, "skiers": s}
 
 
