@@ -213,6 +213,16 @@ def get_skiers_24h_delta() -> list[dict]:
     return results
 
 
+def purge_old_snapshots(hours: int = 36) -> dict:
+    """Supprime les snapshots plus vieux que `hours` heures. Retourne le nb de lignes supprimées."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    with _conn() as con:
+        g = con.execute("DELETE FROM global_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
+        t = con.execute("DELETE FROM team_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
+        s = con.execute("DELETE FROM skier_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
+    return {"global": g, "teams": t, "skiers": s}
+
+
 def get_recent_dons(limit: int = 20) -> list[dict]:
     """Detecte les dons via LAG sur snapshots consecutifs. Fusionne equipes + skieurs."""
     with _conn() as con:

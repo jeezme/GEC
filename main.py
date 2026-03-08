@@ -573,12 +573,14 @@ def run():
 
     def job():
         try:
-            from db import init_db
+            from db import init_db, purge_old_snapshots
             from gender import warn_unknown_genders
             from scraper import scrape_all
             init_db()
             warn_unknown_genders()
             scrape_all()
+            deleted = purge_old_snapshots(hours=36)
+            log.info("Purge snapshots >36h : %s", deleted)
         except Exception as exc:
             log.error("Erreur lors du job : %s", exc, exc_info=True)
 
