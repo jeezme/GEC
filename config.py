@@ -2,7 +2,6 @@ MAIN_URL = "https://glisse-en.coeur-fde.fr"
 
 TEAMS = [
     {"slug": "ma-chance-moi-aussi",            "name": "Ma Chance Moi Aussi",        "dept": "73", "type": "entreprise"},
-    {"slug": "priams-2",                        "name": "Priams",                   "dept": "74", "type": "tribu"},
     {"slug": "aktid",                           "name": "Aktid",                      "dept": "73", "type": "entreprise"},
     {"slug": "archimed",                        "name": "Archimed",                   "dept": "69", "type": "entreprise"},
     {"slug": "ma-chance-moi-aussi-2",           "name": "Ma Chance Moi Aussi 2",      "dept": "73", "type": "entreprise"},
@@ -24,7 +23,7 @@ TEAMS = [
 ]
 
 DUEL_TEAM_1 = "aktid"
-DUEL_TEAM_2 = "priams-2"
+DUEL_TEAM_2 = "bso"
 
 DUEL_DEPT_1 = "73"
 DUEL_DEPT_2 = "74"
