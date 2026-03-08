@@ -17,6 +17,11 @@ os.makedirs("/data", exist_ok=True)
 
 log = logging.getLogger(__name__)
 
+# Initialisation + purge au démarrage (chaque deploy Render)
+db.init_db()
+_purged = db.purge_old_snapshots(hours=36)
+log.info("Startup purge snapshots >36h : %s", _purged)
+
 NBSP = " "
 EURO = "€"
 
