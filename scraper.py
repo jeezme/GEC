@@ -158,9 +158,4 @@ def scrape_all():
 
     log.info("Scraping termine - %d equipes traitees", total)
     cache.flush()
-    cache.set("latest_teams", db.get_all_latest_teams())
-    cache.set("latest_skiers", db.get_all_latest_skiers())
-    cache.set("delta_teams", db.get_team_24h_delta())
-    cache.set("delta_skiers", db.get_skiers_24h_delta())
-    cache.set("recent_dons", db.get_recent_dons())
     cache.set_scraping(False, {"finished_at": datetime.now().strftime("%H:%M")})
