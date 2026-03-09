@@ -538,9 +538,6 @@ def _build_html() -> str:
           "?family=Barlow+Condensed:wght@400;600;700;900&display=swap")
     H2C = "https://html2canvas.hertzen.com/dist/html2canvas.min.js"
 
-    _status = cache.get_status()
-    _meta_refresh = '  <meta http-equiv="refresh" content="5">' if _status["scraping"] else ""
-
     html_parts = [
         "<!DOCTYPE html>",
         '<html lang="fr">',
@@ -550,7 +547,6 @@ def _build_html() -> str:
         '  <title>Glisse en Coeur - ' + today.strftime("%d/%m/%Y") + '</title>',
         '  <link href="' + GF + '" rel="stylesheet">',
         '  <script src="' + H2C + '"></script>',
-        _meta_refresh,
         '  <style>' + css + '</style>',
         "</head>",
         "<body>",
@@ -662,7 +658,6 @@ def admin():
         current = adm_status.get("current_team", "")
         started = adm_status.get("started_at", "")
         adm_banner = (
-            '<meta http-equiv="refresh" content="5">'
             '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;'
             'padding:12px 20px;margin-bottom:24px;font-weight:600">'
             '&#9881;&#65039; Scraping en cours — équipe ' + str(count) + '/' + str(total_t) +
