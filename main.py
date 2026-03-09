@@ -15,19 +15,15 @@ os.makedirs("/data", exist_ok=True)
 
 log = logging.getLogger(__name__)
 
+try:
+    db.init_db()
+except Exception as _e:
+    log.error("init_db() echoue au demarrage : %s", _e)
+
 NBSP = " "
 EURO = "€"
 
 _HTML_CACHE = {"html": None}
-_initialized = False
-
-@app.before_request
-def _startup():
-    global _initialized
-    if _initialized:
-        return
-    _initialized = True
-    db.init_db()
 
 
 def _fmt(n: int) -> str:
