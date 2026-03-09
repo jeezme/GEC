@@ -1,4 +1,3 @@
-import base64
 import logging
 import re
 import time
@@ -118,18 +117,8 @@ def _scrape_skier_item(item, team_slug: str, scraped_at: str):
 
     gender = detect_gender(first_name) if first_name else "M"
 
-    photo_base64 = db.get_skier_photo_base64(skier_url) if skier_url else None
-    if photo_url and not photo_base64:
-        try:
-            r = requests.get(photo_url, headers=HEADERS, timeout=10)
-            ext = photo_url.split(".")[-1].split("?")[0].lower()
-            mime = "image/jpeg" if ext in ["jpg", "jpeg"] else "image/png"
-            photo_base64 = "data:" + mime + ";base64," + base64.b64encode(r.content).decode()
-        except Exception:
-            pass
-
     if skier_url or first_name:
-        db.insert_skier(skier_url, first_name, last_name, photo_url, photo_base64,
+        db.insert_skier(skier_url, first_name, last_name, photo_url, None,
                         team_slug, gender, amount, scraped_at)
 
 
