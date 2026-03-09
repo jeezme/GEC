@@ -31,8 +31,6 @@ def _startup():
         return
     _initialized = True
     db.init_db()
-    purged = db.purge_old_snapshots(hours=36)
-    log.info("Startup purge snapshots >36h : %s", purged)
 
 
 def _fmt(n: int) -> str:
