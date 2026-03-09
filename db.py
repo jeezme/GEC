@@ -8,8 +8,9 @@ DB_PATH = os.path.join(DB_DIR, "glisse.db")
 
 def _conn():
     os.makedirs(DB_DIR, exist_ok=True)
-    con = sqlite3.connect(DB_PATH)
+    con = sqlite3.connect(DB_PATH, timeout=30)
     con.row_factory = sqlite3.Row
+    con.execute("PRAGMA journal_mode=WAL")
     return con
 
 
@@ -222,8 +223,10 @@ def purge_old_snapshots(hours: int = 36) -> dict:
         s = con.execute("DELETE FROM skier_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
     # VACUUM doit être hors transaction
     con2 = _conn()
-    con2.execute("VACUUM")
-    con2.close()
+    try:
+        con2.execute("VACUUM")
+    finally:
+        con2.close()
     return {"global": g, "teams": t, "skiers": s}
 
 
