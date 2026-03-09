@@ -9,7 +9,6 @@ import requests as _requests
 
 from flask import Flask, jsonify, request
 
-import cache
 import db
 from config import DUEL_TEAM_1, DUEL_TEAM_2, TEAMS as _CONFIG_TEAMS, DUEL_DEPT_1, DUEL_DEPT_2, DUEL_DEPT_1_NAME, DUEL_DEPT_2_NAME
 
@@ -47,16 +46,11 @@ _IMG_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWe
 
 def _url_to_b64(url: str) -> str:
     """Télécharge une image depuis son URL et retourne une data URI base64."""
-    cached = cache.get("img:" + url)
-    if cached:
-        return cached
     try:
         resp = _requests.get(url, headers=_IMG_HEADERS, timeout=5)
         ext = url.split(".")[-1].split("?")[0].lower()
         mime = "image/jpeg" if ext in ["jpg", "jpeg"] else "image/png"
-        data_uri = "data:" + mime + ";base64," + _base64.b64encode(resp.content).decode()
-        cache.set("img:" + url, data_uri)
-        return data_uri
+        return "data:" + mime + ";base64," + _base64.b64encode(resp.content).decode()
     except Exception:
         return url
 
@@ -126,22 +120,13 @@ def _build_html() -> str:
 
     _config_slugs = {t["slug"] for t in _CONFIG_TEAMS}
 
-    teams = cache.get("teams")
-    if teams is None:
-        teams = db.get_all_latest_teams()
-        cache.set("teams", teams)
+    teams = db.get_all_latest_teams()
     teams = [t for t in teams if t.get("team_slug") in _config_slugs]
 
-    teams_delta = cache.get("teams_delta")
-    if teams_delta is None:
-        teams_delta = db.get_team_24h_delta()
-        cache.set("teams_delta", teams_delta)
+    teams_delta = db.get_team_24h_delta()
 
 
-    recent_dons = cache.get("recent_dons")
-    if recent_dons is None:
-        recent_dons = db.get_recent_dons(20)
-        cache.set("recent_dons", recent_dons)
+    recent_dons = db.get_recent_dons(20)
     teams_by_slug = {t["team_slug"]: t for t in teams}
 
     total_dons = 0
@@ -547,29 +532,6 @@ def admin():
         for r in last_skiers
     )
 
-    adm_status = cache.get_status()
-    if adm_status["scraping"]:
-        count = adm_status.get("count", 0)
-        total_t = adm_status.get("total", "?")
-        current = adm_status.get("current_team", "")
-        started = adm_status.get("started_at", "")
-        adm_banner = (
-            '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;'
-            'padding:12px 20px;margin-bottom:24px;font-weight:600">'
-            '&#9881;&#65039; Scraping en cours — équipe ' + str(count) + '/' + str(total_t) +
-            (' (' + current + ')' if current else '') +
-            (' — démarré à ' + started if started else '') +
-            '</div>'
-        )
-    else:
-        finished = adm_status.get("finished_at", "")
-        adm_banner = (
-            '<div style="background:#d4edda;border:1px solid #28a745;border-radius:8px;'
-            'padding:12px 20px;margin-bottom:24px;font-weight:600">'
-            '&#9989; Dernière mise à jour : ' + (finished if finished else "—") +
-            '</div>'
-        )
-
     adm_css = (
         "body{font-family:sans-serif;background:#f5f7fa;color:#1a1d2e;padding:24px}"
         "h1,h2{color:#2c3e50;margin-bottom:12px}"
@@ -589,7 +551,6 @@ def admin():
         "<meta charset=\"UTF-8\">"
         "<title>Admin - Glisse en Coeur</title>"
         "<style>" + adm_css + "</style></head><body>"
-        + adm_banner +
         "<h1>Administration — Glisse en Coeur</h1>"
         "<div class=\"stats\">"
         "<div class=\"stat\"><div class=\"stat-val\">" + f"{team_count:,}" + "</div>"

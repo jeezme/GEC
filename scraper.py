@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-import cache
 import db
 from config import MAIN_URL, TEAMS
 
@@ -94,17 +93,11 @@ def scrape_team(team: dict, scraped_at: str):
 
 def scrape_all():
     scraped_at = _now_iso()
-    started_at = datetime.now().strftime("%H:%M")
-    total = len(TEAMS)
-    cache.set_scraping(True, {"started_at": started_at, "count": 0, "total": total})
     log.info("Debut scraping global a %s", scraped_at)
     scrape_global(scraped_at)
     time.sleep(1)
 
     for i, team in enumerate(TEAMS, 1):
-        cache.set_scraping(True, {"started_at": started_at, "count": i, "total": total, "current_team": team["slug"]})
         scrape_team(team, scraped_at)
 
     log.info("Scraping termine - %d equipes traitees", total)
-    cache.flush()
-    cache.set_scraping(False, {"finished_at": datetime.now().strftime("%H:%M")})
