@@ -236,18 +236,12 @@ def get_skiers_24h_delta() -> list[dict]:
 
 
 def purge_old_snapshots(hours: int = 36) -> dict:
-    """Supprime les snapshots plus vieux que `hours` heures et libère l'espace disque (VACUUM)."""
+    """Supprime les snapshots plus vieux que `hours` heures."""
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
     with _conn() as con:
         g = con.execute("DELETE FROM global_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
         t = con.execute("DELETE FROM team_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
         s = con.execute("DELETE FROM skier_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
-    # VACUUM doit être hors transaction
-    con2 = _conn()
-    try:
-        con2.execute("VACUUM")
-    finally:
-        con2.close()
     return {"global": g, "teams": t, "skiers": s}
 
 
