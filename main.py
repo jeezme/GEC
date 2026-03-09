@@ -1,10 +1,7 @@
-import base64 as _base64
 import logging
 import os
 import threading
 from datetime import date, datetime
-
-import requests as _requests
 
 from flask import Flask, jsonify, request
 
@@ -46,27 +43,11 @@ def _medal(rank: int) -> str:
     return medals.get(rank, f"#{rank}")
 
 
-_IMG_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-
-
-def _url_to_b64(url: str) -> str:
-    """Télécharge une image depuis son URL et retourne une data URI base64."""
-    try:
-        resp = _requests.get(url, headers=_IMG_HEADERS, timeout=5)
-        ext = url.split(".")[-1].split("?")[0].lower()
-        mime = "image/jpeg" if ext in ["jpg", "jpeg"] else "image/png"
-        return "data:" + mime + ";base64," + _base64.b64encode(resp.content).decode()
-    except Exception:
-        return url
-
-
 def _img(src: str, width: str, extra: str = "", b64: str = "") -> str:
     if b64:
         src = b64
     elif not src:
         return ""
-    elif src.startswith("http"):
-        src = _url_to_b64(src)
     return '<img src="' + src + '" width="' + width + '"' + extra + ' onerror="this.remove()">'
 
 
