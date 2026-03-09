@@ -85,8 +85,8 @@ def scrape_team(team: dict, scraped_at: str):
     objectif_tags = soup.select("h3.objectif-text")
     objectif = _parse_amount(objectif_tags[-1].get_text()) if objectif_tags else 0
 
-    logo_base64 = None
-    if logo_url:
+    logo_base64 = db.get_team_logo_base64(slug)
+    if logo_url and not logo_base64:
         try:
             r = requests.get(logo_url, headers=HEADERS, timeout=10)
             ext = logo_url.split(".")[-1].split("?")[0].lower()

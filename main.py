@@ -1,7 +1,6 @@
 import base64 as _base64
 import logging
 import os
-import sqlite3
 import threading
 from datetime import date, datetime
 
@@ -132,20 +131,9 @@ def _build_html() -> str:
     recent_dons = db.get_recent_dons(20)
     teams_by_slug = {t["team_slug"]: t for t in teams}
 
-    total_dons = 0
-    total_objectif = 1
-    try:
-        con = sqlite3.connect("/data/glisse.db")
-        con.row_factory = sqlite3.Row
-        g = con.execute(
-            "SELECT total_dons, total_objectif FROM global_snapshots ORDER BY scraped_at DESC LIMIT 1"
-        ).fetchone()
-        if g:
-            total_dons = g["total_dons"]
-            total_objectif = g["total_objectif"] or 1
-        con.close()
-    except Exception:
-        pass
+    g = db.get_latest_global()
+    total_dons = g["total_dons"]
+    total_objectif = g["total_objectif"]
 
     pct_global = _pct(total_dons, total_objectif)
     global_banner = (

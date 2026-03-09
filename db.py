@@ -79,6 +79,23 @@ def insert_skier(skier_url, first_name, last_name, photo_url, photo_base64, team
         )
 
 
+def get_team_logo_base64(slug: str) -> str | None:
+    with _conn() as con:
+        row = con.execute(
+            "SELECT logo_base64 FROM team_snapshots WHERE team_slug = ? AND logo_base64 IS NOT NULL ORDER BY scraped_at DESC LIMIT 1",
+            (slug,)
+        ).fetchone()
+    return row["logo_base64"] if row else None
+
+
+def get_latest_global() -> dict:
+    with _conn() as con:
+        row = con.execute(
+            "SELECT total_dons, total_objectif FROM global_snapshots ORDER BY scraped_at DESC LIMIT 1"
+        ).fetchone()
+    return {"total_dons": row["total_dons"], "total_objectif": row["total_objectif"] or 1} if row else {"total_dons": 0, "total_objectif": 1}
+
+
 def get_last_team_amount(slug: str) -> int | None:
     with _conn() as con:
         row = con.execute(
