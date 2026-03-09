@@ -6,6 +6,7 @@ from datetime import date, datetime
 
 from flask import Flask, jsonify, request
 
+import cache
 import db
 from config import DUEL_TEAM_1, DUEL_TEAM_2, TEAMS as _CONFIG_TEAMS, DUEL_DEPT_1, DUEL_DEPT_2, DUEL_DEPT_1_NAME, DUEL_DEPT_2_NAME
 from gender import detect_gender as _detect_gender, load_overrides as _load_gender_overrides
@@ -133,15 +134,36 @@ def _build_html() -> str:
     today = date.today()
     generated_at = datetime.now().strftime("%d/%m/%Y à %H:%M")
 
-    teams = db.get_all_latest_teams()
-    skiers = db.get_all_latest_skiers()
     _config_slugs = {t["slug"] for t in _CONFIG_TEAMS}
+
+    teams = cache.get("teams")
+    if teams is None:
+        teams = db.get_all_latest_teams()
+        cache.set("teams", teams)
     teams = [t for t in teams if t.get("team_slug") in _config_slugs]
+
+    skiers = cache.get("skiers")
+    if skiers is None:
+        skiers = db.get_all_latest_skiers()
+        cache.set("skiers", skiers)
     skiers = [s for s in skiers if s.get("team_slug") in _config_slugs]
+
     _gender_cache = _load_gender_overrides()
-    teams_delta = db.get_team_24h_delta()
-    skiers_delta = db.get_skiers_24h_delta()
-    recent_dons = db.get_recent_dons(20)
+
+    teams_delta = cache.get("teams_delta")
+    if teams_delta is None:
+        teams_delta = db.get_team_24h_delta()
+        cache.set("teams_delta", teams_delta)
+
+    skiers_delta = cache.get("skiers_delta")
+    if skiers_delta is None:
+        skiers_delta = db.get_skiers_24h_delta()
+        cache.set("skiers_delta", skiers_delta)
+
+    recent_dons = cache.get("recent_dons")
+    if recent_dons is None:
+        recent_dons = db.get_recent_dons(20)
+        cache.set("recent_dons", recent_dons)
     teams_by_slug = {t["team_slug"]: t for t in teams}
 
     total_dons = 0
@@ -516,6 +538,9 @@ def _build_html() -> str:
           "?family=Barlow+Condensed:wght@400;600;700;900&display=swap")
     H2C = "https://html2canvas.hertzen.com/dist/html2canvas.min.js"
 
+    _status = cache.get_status()
+    _meta_refresh = '  <meta http-equiv="refresh" content="5">' if _status["scraping"] else ""
+
     html_parts = [
         "<!DOCTYPE html>",
         '<html lang="fr">',
@@ -525,6 +550,7 @@ def _build_html() -> str:
         '  <title>Glisse en Coeur - ' + today.strftime("%d/%m/%Y") + '</title>',
         '  <link href="' + GF + '" rel="stylesheet">',
         '  <script src="' + H2C + '"></script>',
+        _meta_refresh,
         '  <style>' + css + '</style>',
         "</head>",
         "<body>",
@@ -629,6 +655,30 @@ def admin():
         for r in last_skiers
     )
 
+    adm_status = cache.get_status()
+    if adm_status["scraping"]:
+        count = adm_status.get("count", 0)
+        total_t = adm_status.get("total", "?")
+        current = adm_status.get("current_team", "")
+        started = adm_status.get("started_at", "")
+        adm_banner = (
+            '<meta http-equiv="refresh" content="5">'
+            '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;'
+            'padding:12px 20px;margin-bottom:24px;font-weight:600">'
+            '&#9881;&#65039; Scraping en cours — équipe ' + str(count) + '/' + str(total_t) +
+            (' (' + current + ')' if current else '') +
+            (' — démarré à ' + started if started else '') +
+            '</div>'
+        )
+    else:
+        finished = adm_status.get("finished_at", "")
+        adm_banner = (
+            '<div style="background:#d4edda;border:1px solid #28a745;border-radius:8px;'
+            'padding:12px 20px;margin-bottom:24px;font-weight:600">'
+            '&#9989; Dernière mise à jour : ' + (finished if finished else "—") +
+            '</div>'
+        )
+
     adm_css = (
         "body{font-family:sans-serif;background:#f5f7fa;color:#1a1d2e;padding:24px}"
         "h1,h2{color:#2c3e50;margin-bottom:12px}"
@@ -648,6 +698,7 @@ def admin():
         "<meta charset=\"UTF-8\">"
         "<title>Admin - Glisse en Coeur</title>"
         "<style>" + adm_css + "</style></head><body>"
+        + adm_banner +
         "<h1>Administration — Glisse en Coeur</h1>"
         "<div class=\"stats\">"
         "<div class=\"stat\"><div class=\"stat-val\">" + f"{team_count:,}" + "</div>"
