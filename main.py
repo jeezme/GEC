@@ -12,7 +12,6 @@ from flask import Flask, jsonify, request
 import cache
 import db
 from config import DUEL_TEAM_1, DUEL_TEAM_2, TEAMS as _CONFIG_TEAMS, DUEL_DEPT_1, DUEL_DEPT_2, DUEL_DEPT_1_NAME, DUEL_DEPT_2_NAME
-from gender import detect_gender as _detect_gender, load_overrides as _load_gender_overrides
 
 app = Flask(__name__)
 SECRET_TOKEN = os.environ.get("SECRET_TOKEN", "changeme")
@@ -91,39 +90,6 @@ def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
         + _fmt(team.get("objectif", 0)) + ')</div></div>'
     )
 
-def _skier_row_html(skier: dict, rank: int, show_delta: bool = False,
-                    show_badge: bool = True, show_team: bool = False) -> str:
-    photo = skier.get("photo_url", "")
-    first = skier.get("first_name", "")
-    last = skier.get("last_name", "").upper()
-    name = (first + " " + last).strip()
-    team_name = skier.get("team_name", "")
-    amount = (skier.get("delta_24h", skier.get("amount", 0))
-              if show_delta else skier.get("amount", 0))
-    gender = skier.get("gender", "M")
-    badge = (
-        '<span class="badge-f">&#9792;</span>'
-        if gender == "F"
-        else '<span class="badge-m">&#9794;</span>'
-    )
-    big = rank == 1 and show_delta
-    sz = "56" if big else "40"
-    cls = "skier-row skier-top1" if big else "skier-row"
-    team_span = (
-        '<br><span class="skier-team">' + team_name + '</span>'
-        if show_team and team_name else ""
-    )
-    photo_html = _img(photo, sz, ' class="skier-photo"')
-    return (
-        '<div class="' + cls + '">'
-        '<span class="skier-rank">' + _medal(rank) + '</span>'
-        + photo_html
-        + '<span class="skier-name">' + name + team_span + '</span>'
-        + (badge if show_badge else "")
-        + '<span class="skier-amount">' + _fmt(amount) + '</span>'
-        '</div>'
-    )
-
 
 def _save_btn(card_id: str, filename: str) -> str:
     ap = chr(39)
@@ -166,23 +132,11 @@ def _build_html() -> str:
         cache.set("teams", teams)
     teams = [t for t in teams if t.get("team_slug") in _config_slugs]
 
-    skiers = cache.get("skiers")
-    if skiers is None:
-        skiers = db.get_all_latest_skiers()
-        cache.set("skiers", skiers)
-    skiers = [s for s in skiers if s.get("team_slug") in _config_slugs]
-
-    _gender_cache = _load_gender_overrides()
-
     teams_delta = cache.get("teams_delta")
     if teams_delta is None:
         teams_delta = db.get_team_24h_delta()
         cache.set("teams_delta", teams_delta)
 
-    skiers_delta = cache.get("skiers_delta")
-    if skiers_delta is None:
-        skiers_delta = db.get_skiers_24h_delta()
-        cache.set("skiers_delta", skiers_delta)
 
     recent_dons = cache.get("recent_dons")
     if recent_dons is None:
@@ -217,44 +171,6 @@ def _build_html() -> str:
         '</div>'
     )
 
-    top6 = teams[:6]
-    card1_body = ""
-    for i, t in enumerate(top6, 1):
-        size = "lg" if i == 1 else ("md" if i <= 3 else "sm")
-        card1_body += _team_card_html(t, i, size)
-
-    girls = [s for s in skiers if _detect_gender(s.get("first_name", ""), _gender_cache) == "F"]
-    boys = [s for s in skiers if _detect_gender(s.get("first_name", ""), _gender_cache) == "M"]
-    total_f = sum(s["amount"] for s in girls)
-    total_m = sum(s["amount"] for s in boys)
-    total_gm = total_f + total_m or 1
-    pct_f = _pct(total_f, total_gm)
-    pct_m = _pct(total_m, total_gm)
-    avg_f = total_f // len(girls) if girls else 0
-    avg_m = total_m // len(boys) if boys else 0
-    top3_f = "".join(_skier_row_html(s, i + 1) for i, s in enumerate(girls[:3]))
-    top3_m = "".join(_skier_row_html(s, i + 1) for i, s in enumerate(boys[:3]))
-    card2_body = (
-        '<div class="versus-wrap">'
-        '<div class="versus-side">'
-        '<div class="side-title" style="color:#e91e8c">&#9792; FILLES</div>'
-        '<div class="side-total">' + _fmt(total_f) + '</div>'
-        '<div class="side-stats">' + str(len(girls)) + ' skieuses &bull; moy. ' + _fmt(avg_f) + '</div>'
-        '<div class="top3">' + top3_f + '</div></div>'
-        '<div class="versus-center"><div class="vs-label">VS</div>'
-        '<div class="dual-bar">'
-        '<div class="dual-bar-f" style="width:' + str(pct_f) + '%"></div>'
-        '<div class="dual-bar-m" style="width:' + str(pct_m) + '%"></div>'
-        '</div>'
-        '<div class="dual-pcts">'
-        '<span style="color:#e91e8c">' + str(pct_f) + '%</span> / '
-        '<span style="color:#3498db">' + str(pct_m) + '%</span></div></div>'
-        '<div class="versus-side">'
-        '<div class="side-title" style="color:#3498db">&#9794; GARCONS</div>'
-        '<div class="side-total">' + _fmt(total_m) + '</div>'
-        '<div class="side-stats">' + str(len(boys)) + ' skieurs &bull; moy. ' + _fmt(avg_m) + '</div>'
-        '<div class="top3">' + top3_m + '</div></div></div>'
-    )
 
     _dept_by_slug = {c["slug"]: c["dept"] for c in _CONFIG_TEAMS}
     teams_73 = [t for t in teams if _dept_by_slug.get(t.get("team_slug", "")) == DUEL_DEPT_1]
@@ -300,19 +216,14 @@ def _build_html() -> str:
     a2 = team2["amount"] if team2 else 0
     ecart = abs(a1 - a2)
     leading1 = a1 >= a2
-    skiers1 = sorted([s for s in skiers if s.get("team_slug") == DUEL_TEAM_1],
-                     key=lambda x: x["amount"], reverse=True)
-    skiers2 = sorted([s for s in skiers if s.get("team_slug") == DUEL_TEAM_2],
-                     key=lambda x: x["amount"], reverse=True)
     n1 = team1["team_name"] if team1 else DUEL_TEAM_1
     n2 = team2["team_name"] if team2 else DUEL_TEAM_2
 
-    def _duel_half(team, side_skiers, leading):
+    def _duel_half(team, leading):
         if not team:
             return '<div class="duel-half">Equipe introuvable</div>'
         pct = _pct(team["amount"], team.get("objectif", 1) or 1)
         glow = " duel-leading" if leading else ""
-        top3 = "".join(_skier_row_html(s, i + 1, show_badge=False) for i, s in enumerate(side_skiers[:3]))
         logo_img = _img(team.get("logo_url", ""), "80")
         return (
             '<div class="duel-half' + glow + '">' + logo_img
@@ -321,17 +232,17 @@ def _build_html() -> str:
             '<div class="progress-bar-wrap">'
             '<div class="progress-bar" style="width:' + str(pct) + '%"></div></div>'
             '<div class="progress-label">' + str(pct) + '% objectif</div>'
-            '<div class="duel-top3">' + top3 + '</div></div>'
+            '</div>'
         )
 
     card4_body = (
         '<div class="duel-wrap">'
-        + _duel_half(team1, skiers1, leading1)
+        + _duel_half(team1, leading1)
         + '<div class="duel-center">'
           '<div class="vs-label">&#x2694;&#xFE0F;</div>'
           '<div class="ecart-label">Ecart</div>'
           '<div class="ecart-amount">' + _fmt(ecart) + '</div></div>'
-        + _duel_half(team2, skiers2, not leading1)
+        + _duel_half(team2, not leading1)
         + '</div>'
     )
 
@@ -354,27 +265,6 @@ def _build_html() -> str:
         '<thead><tr><th>Rang</th><th></th><th>Equipe</th><th>+24h</th><th>Total</th><th></th></tr></thead>'
         '<tbody>' + rows5 + '</tbody></table>'
     )
-
-    top10_sk = skiers_delta[:10]
-    for s in top10_sk:
-        s["team_name"] = teams_by_slug.get(s.get("team_slug", ""), {}).get("team_name", "")
-    rows6 = "".join(
-        _skier_row_html(s, i + 1, show_delta=True, show_badge=False, show_team=True)
-        for i, s in enumerate(top10_sk)
-    )
-    card6_body = '<div class="skiers-list">' + rows6 + '</div>'
-
-    # CARD 7 - Top 20 skieurs (total)
-    top20_sk = skiers[:20]
-    for s in top20_sk:
-        s["team_name"] = teams_by_slug.get(s.get("team_slug", ""), {}).get("team_name", "")
-    rows7 = ""
-    for i, s in enumerate(top20_sk):
-        row = _skier_row_html(s, i + 1, show_badge=False, show_team=True)
-        if i == 0:
-            row = '<div class="skier-gold">' + row + '</div>'
-        rows7 += row
-    card7_body = '<div class="skiers-list">' + rows7 + '</div>'
 
     # CARD 8 - Classement des equipes par montant collecte
     teams_sorted_amount = sorted(
@@ -495,14 +385,6 @@ def _build_html() -> str:
         ".dual-bar-m{height:100%;background:#3498db;border-radius:0 4px 4px 0}"
         ".dual-pcts{margin-top:6px;font-size:1em;font-weight:700}"
         ".logos-mosaic{display:flex;flex-wrap:wrap;gap:4px;margin-top:12px}"
-        ".skier-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e0e4ed}"
-        ".skier-row:last-child{border-bottom:none}"
-        ".skier-top1{background:linear-gradient(90deg,#fffbea,transparent);border-radius:8px;padding:10px}"
-        ".skier-rank{font-size:1.3em;min-width:32px}"
-        ".skier-photo{border-radius:50%;object-fit:cover}"
-        ".skier-name{flex:1;font-weight:700;font-size:1.05em;color:#2c3e50;line-height:1.3}"
-        ".skier-team{font-size:.8em;font-weight:400;color:#888;display:block}"
-        ".skier-amount{color:#48cfad;font-weight:900;font-size:1.1em}"
         ".badge-f{background:#e91e8c;color:#fff;border-radius:4px;padding:1px 5px;font-size:.85em}"
         ".badge-m{background:#3498db;color:#fff;border-radius:4px;padding:1px 5px;font-size:.85em}"
         ".duel-wrap{display:flex;gap:12px;align-items:flex-start}"
@@ -528,8 +410,6 @@ def _build_html() -> str:
         ".don-empty{color:#888;font-style:italic}"
         ".footer{max-width:800px;margin:0 auto;padding:24px 0;text-align:center;color:#888}"
         ".footer-meta{font-size:.9em}"
-        ".skiers-list{}.top3 .skier-row{padding:4px 0}"
-        ".skier-gold{background:linear-gradient(90deg,#fffbea,transparent);border-radius:8px;padding:4px}"
         ".obj-summary{margin-top:16px;padding:16px;background:#f8f9fc;border-radius:8px;border:1px solid #e0e4ed}"
         ".obj-summary-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:1em}"
         "@media(max-width:900px){"
@@ -585,14 +465,8 @@ def _build_html() -> str:
               "classement-equipes-" + str(today) + ".png", generated_at),
         _card("card4", "DUEL : " + n1 + " vs " + n2, card4_body,
               "duel-" + str(today) + ".png", generated_at),
-        _card("card2", "⚡ FILLES vs GARCONS", card2_body,
-              "filles-garcons-" + str(today) + ".png", generated_at),
         _card("card3", DUEL_DEPT_1_NAME.upper() + " " + DUEL_DEPT_1 + " vs " + DUEL_DEPT_2_NAME.upper() + " " + DUEL_DEPT_2, card3_body,
               "depts-" + str(today) + ".png", generated_at),
-        _card("card6", "MEILLEURS SKIEURS 24H", card6_body,
-              "24h-skieurs-" + str(today) + ".png", generated_at),
-        _card("card7", chr(127935) + " TOP 20 SKIEURS", card7_body,
-              "top20-skieurs-" + str(today) + ".png", generated_at),
         footer,
         "  </div>",
         '  <script>' + js + '</script>',
@@ -625,10 +499,8 @@ def run():
     def job():
         try:
             from db import init_db, purge_old_snapshots
-            from gender import warn_unknown_genders
             from scraper import scrape_all
             init_db()
-            warn_unknown_genders()
             scrape_all()
             deleted = purge_old_snapshots(hours=36)
             log.info("Purge snapshots >36h : %s", deleted)

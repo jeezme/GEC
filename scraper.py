@@ -9,7 +9,6 @@ from bs4 import BeautifulSoup
 import cache
 import db
 from config import MAIN_URL, TEAMS
-from gender import detect_gender
 
 log = logging.getLogger(__name__)
 
@@ -89,42 +88,8 @@ def scrape_team(team: dict, scraped_at: str):
     db.insert_team(slug, team_name, logo_url, None, team_type, dept, amount, objectif, scraped_at)
     log.info("  %s : %d / %d", team_name, amount, objectif)
 
-    # Skieurs
-    for item in soup.select("div.list-participant-item"):
-        _scrape_skier_item(item, slug, scraped_at)
-
     time.sleep(1)
 
-
-def _scrape_skier_item(item, team_slug: str, scraped_at: str):
-    # Lien coureur
-    link_tag = item.select_one("a[href]")
-    skier_url = link_tag["href"] if link_tag else ""
-    if skier_url and not skier_url.startswith("http"):
-        skier_url = MAIN_URL + skier_url
-
-    # Prenom / Nom
-    title_divs = item.select("div.participant-item-titel div")
-    first_name = title_divs[0].get_text(strip=True) if len(title_divs) > 0 else ""
-    last_name = title_divs[1].get_text(strip=True) if len(title_divs) > 1 else ""
-
-    # Photo
-    photo_tag = item.select_one("div.participant-item-img img")
-    photo_url = photo_tag["src"] if photo_tag and photo_tag.get("src") else ""
-    if photo_url and photo_url.startswith("/"):
-        photo_url = MAIN_URL + photo_url
-    # Montant
-    amount_tag = item.select_one("div.participant-item-total-dont")
-    amount_text = amount_tag.get_text(strip=True) if amount_tag else "0"
-    amount_text = amount_text.replace("collectes", "").replace("collecte", "").replace("€", "").strip()
-    amount = _parse_amount(amount_text)
-
-    # Genre
-    gender = detect_gender(first_name) if first_name else "M"
-
-    if skier_url or first_name:
-        db.insert_skier(skier_url, first_name, last_name, photo_url, None,
-                        team_slug, gender, amount, scraped_at)
 
 
 def scrape_all():
