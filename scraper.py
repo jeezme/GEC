@@ -97,7 +97,7 @@ def scrape_all():
     scrape_global(scraped_at)
     time.sleep(1)
 
-    for i, team in enumerate(TEAMS, 1):
+    for team in TEAMS:
         scrape_team(team, scraped_at)
 
-    log.info("Scraping termine - %d equipes traitees", total)
+    log.info("Scraping termine - %d equipes traitees", len(TEAMS))
