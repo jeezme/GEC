@@ -1,4 +1,3 @@
-import base64
 import logging
 import re
 import time
@@ -27,17 +26,6 @@ def _parse_amount(text: str) -> int:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def image_to_base64(url: str) -> str | None:
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=10)
-        b64 = base64.b64encode(resp.content).decode("utf-8")
-        ext = url.split(".")[-1].split("?")[0].lower()
-        mime = "image/jpeg" if ext in ["jpg", "jpeg"] else "image/png"
-        return f"data:{mime};base64,{b64}"
-    except Exception:
-        return None
 
 
 def scrape_global(scraped_at: str) -> dict:
@@ -82,8 +70,6 @@ def scrape_team(team: dict, scraped_at: str):
     logo_url = logo_tag["src"] if logo_tag and logo_tag.get("src") else ""
     if logo_url and logo_url.startswith("/"):
         logo_url = MAIN_URL + logo_url
-    logo_base64 = image_to_base64(logo_url) if logo_url else None
-
     # Nom equipe
     name_tag = soup.select_one("h3.logo-text")
     team_name = name_tag.get_text(strip=True) if name_tag else team["name"]
@@ -100,7 +86,7 @@ def scrape_team(team: dict, scraped_at: str):
     objectif_tags = soup.select("h3.objectif-text")
     objectif = _parse_amount(objectif_tags[-1].get_text()) if objectif_tags else 0
 
-    db.insert_team(slug, team_name, logo_url, logo_base64, team_type, dept, amount, objectif, scraped_at)
+    db.insert_team(slug, team_name, logo_url, None, team_type, dept, amount, objectif, scraped_at)
     log.info("  %s : %d / %d", team_name, amount, objectif)
 
     # Skieurs
@@ -127,8 +113,6 @@ def _scrape_skier_item(item, team_slug: str, scraped_at: str):
     photo_url = photo_tag["src"] if photo_tag and photo_tag.get("src") else ""
     if photo_url and photo_url.startswith("/"):
         photo_url = MAIN_URL + photo_url
-    photo_base64 = image_to_base64(photo_url) if photo_url else None
-
     # Montant
     amount_tag = item.select_one("div.participant-item-total-dont")
     amount_text = amount_tag.get_text(strip=True) if amount_tag else "0"
@@ -139,7 +123,7 @@ def _scrape_skier_item(item, team_slug: str, scraped_at: str):
     gender = detect_gender(first_name) if first_name else "M"
 
     if skier_url or first_name:
-        db.insert_skier(skier_url, first_name, last_name, photo_url, photo_base64,
+        db.insert_skier(skier_url, first_name, last_name, photo_url, None,
                         team_slug, gender, amount, scraped_at)
 
 

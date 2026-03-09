@@ -91,21 +91,6 @@ def get_last_team_amount(slug: str) -> int | None:
 def get_all_latest_teams() -> list[dict]:
     with _conn() as con:
         rows = con.execute("""
-            SELECT ts.*
-            FROM team_snapshots ts
-            INNER JOIN (
-                SELECT team_slug, MAX(scraped_at) AS max_at
-                FROM team_snapshots GROUP BY team_slug
-            ) latest ON ts.team_slug = latest.team_slug AND ts.scraped_at = latest.max_at
-            ORDER BY ts.amount DESC
-        """).fetchall()
-    return [dict(r) for r in rows]
-
-
-def get_all_latest_teams_light() -> list[dict]:
-    """Même requête que get_all_latest_teams sans logo_base64 (pour le cache web)."""
-    with _conn() as con:
-        rows = con.execute("""
             SELECT ts.id, ts.team_slug, ts.team_name, ts.logo_url, ts.team_type,
                    ts.dept, ts.amount, ts.objectif, ts.scraped_at
             FROM team_snapshots ts
@@ -119,21 +104,6 @@ def get_all_latest_teams_light() -> list[dict]:
 
 
 def get_all_latest_skiers() -> list[dict]:
-    with _conn() as con:
-        rows = con.execute("""
-            SELECT ss.*
-            FROM skier_snapshots ss
-            INNER JOIN (
-                SELECT skier_url, MAX(scraped_at) AS max_at
-                FROM skier_snapshots GROUP BY skier_url
-            ) latest ON ss.skier_url = latest.skier_url AND ss.scraped_at = latest.max_at
-            ORDER BY ss.amount DESC
-        """).fetchall()
-    return [dict(r) for r in rows]
-
-
-def get_all_latest_skiers_light() -> list[dict]:
-    """Même requête que get_all_latest_skiers sans photo_base64 (pour le cache web)."""
     with _conn() as con:
         rows = con.execute("""
             SELECT ss.id, ss.skier_url, ss.first_name, ss.last_name, ss.photo_url,

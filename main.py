@@ -1,8 +1,11 @@
+import base64 as _base64
 import logging
 import os
 import sqlite3
 import threading
 from datetime import date, datetime
+
+import requests as _requests
 
 from flask import Flask, jsonify, request
 
@@ -40,15 +43,36 @@ def _medal(rank: int) -> str:
     return medals.get(rank, f"#{rank}")
 
 
+_IMG_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+
+
+def _url_to_b64(url: str) -> str:
+    """Télécharge une image depuis son URL et retourne une data URI base64."""
+    cached = cache.get("img:" + url)
+    if cached:
+        return cached
+    try:
+        resp = _requests.get(url, headers=_IMG_HEADERS, timeout=5)
+        ext = url.split(".")[-1].split("?")[0].lower()
+        mime = "image/jpeg" if ext in ["jpg", "jpeg"] else "image/png"
+        data_uri = "data:" + mime + ";base64," + _base64.b64encode(resp.content).decode()
+        cache.set("img:" + url, data_uri)
+        return data_uri
+    except Exception:
+        return url
+
+
 def _img(src: str, width: str, extra: str = "") -> str:
     if not src:
         return ""
+    if src.startswith("http"):
+        src = _url_to_b64(src)
     return '<img src="' + src + '" width="' + width + '"' + extra + ' onerror="this.remove()">'
 
 
 def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
     pct = _pct(team.get("amount", 0), team.get("objectif", 1) or 1)
-    logo = team.get("logo_base64") or team.get("logo_url", "")
+    logo = team.get("logo_url", "")
     logo_size = {"lg": "100", "md": "64", "sm": "40"}.get(size, "64")
     gold = (
         ' style="background:linear-gradient(135deg,#fffbea 0%,#fff8e1 60%);'
@@ -69,7 +93,7 @@ def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
 
 def _skier_row_html(skier: dict, rank: int, show_delta: bool = False,
                     show_badge: bool = True, show_team: bool = False) -> str:
-    photo = skier.get("photo_base64") or skier.get("photo_url", "")
+    photo = skier.get("photo_url", "")
     first = skier.get("first_name", "")
     last = skier.get("last_name", "").upper()
     name = (first + " " + last).strip()
@@ -138,13 +162,13 @@ def _build_html() -> str:
 
     teams = cache.get("teams")
     if teams is None:
-        teams = db.get_all_latest_teams_light()
+        teams = db.get_all_latest_teams()
         cache.set("teams", teams)
     teams = [t for t in teams if t.get("team_slug") in _config_slugs]
 
     skiers = cache.get("skiers")
     if skiers is None:
-        skiers = db.get_all_latest_skiers_light()
+        skiers = db.get_all_latest_skiers()
         cache.set("skiers", skiers)
     skiers = [s for s in skiers if s.get("team_slug") in _config_slugs]
 
@@ -241,12 +265,12 @@ def _build_html() -> str:
     pct_73 = _pct(total_73, total_depts)
     pct_74 = _pct(total_74, total_depts)
     logos_73 = "".join(
-        _img(t.get("logo_base64") or t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
-        for t in teams_73 if t.get("logo_base64") or t.get("logo_url")
+        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
+        for t in teams_73 if t.get("logo_url")
     )
     logos_74 = "".join(
-        _img(t.get("logo_base64") or t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
-        for t in teams_74 if t.get("logo_base64") or t.get("logo_url")
+        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
+        for t in teams_74 if t.get("logo_url")
     )
     card3_body = (
         '<div class="versus-wrap">'
@@ -289,7 +313,7 @@ def _build_html() -> str:
         pct = _pct(team["amount"], team.get("objectif", 1) or 1)
         glow = " duel-leading" if leading else ""
         top3 = "".join(_skier_row_html(s, i + 1, show_badge=False) for i, s in enumerate(side_skiers[:3]))
-        logo_img = _img(team.get("logo_base64") or team.get("logo_url", ""), "80")
+        logo_img = _img(team.get("logo_url", ""), "80")
         return (
             '<div class="duel-half' + glow + '">' + logo_img
             + '<div class="duel-name">' + team.get("team_name", "") + '</div>'
@@ -315,7 +339,7 @@ def _build_html() -> str:
     rows5 = ""
     for i, d in enumerate(top10_teams, 1):
         t5 = teams_by_slug.get(d["team_slug"], {})
-        logo_img = _img(t5.get("logo_base64") or t5.get("logo_url", ""), "32")
+        logo_img = _img(t5.get("logo_url", ""), "32")
         trend = "↑" if d["delta_24h"] > 0 else "→"
         tc = "#48cfad" if d["delta_24h"] > 0 else "#aaa"
         rows5 += (
@@ -360,7 +384,7 @@ def _build_html() -> str:
     for i, t in enumerate(teams_sorted_amount, 1):
         pct_t = _pct(t.get("amount", 0), t.get("objectif", 1) or 1)
         bar_col = "#27ae60" if pct_t >= 100 else ("#f39c12" if pct_t >= 50 else "#e74c3c")
-        logo_td = _img(t.get("logo_base64") or t.get("logo_url", ""), "32")
+        logo_td = _img(t.get("logo_url", ""), "32")
         medal_td = _medal(i) if i <= 3 else '<span style="color:#888;font-size:.9em">' + str(i) + '</span>'
         rows8 += (
             '<tr>'
