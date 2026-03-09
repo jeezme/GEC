@@ -23,7 +23,7 @@ TEAMS = [
 ]
 
 DUEL_TEAM_1 = "aktid"
-DUEL_TEAM_2 = "bso"
+DUEL_TEAM_2 = "archimed"
 
 DUEL_DEPT_1 = "73"
 DUEL_DEPT_2 = "74"
