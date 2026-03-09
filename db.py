@@ -79,6 +79,15 @@ def insert_skier(skier_url, first_name, last_name, photo_url, photo_base64, team
         )
 
 
+def get_skier_photo_base64(skier_url: str) -> str | None:
+    with _conn() as con:
+        row = con.execute(
+            "SELECT photo_base64 FROM skier_snapshots WHERE skier_url = ? AND photo_base64 IS NOT NULL ORDER BY scraped_at DESC LIMIT 1",
+            (skier_url,)
+        ).fetchone()
+    return row["photo_base64"] if row else None
+
+
 def get_team_logo_base64(slug: str) -> str | None:
     with _conn() as con:
         row = con.execute(
@@ -123,7 +132,7 @@ def get_all_latest_teams() -> list[dict]:
 def get_all_latest_skiers() -> list[dict]:
     with _conn() as con:
         rows = con.execute("""
-            SELECT ss.id, ss.skier_url, ss.first_name, ss.last_name, ss.photo_url,
+            SELECT ss.id, ss.skier_url, ss.first_name, ss.last_name, ss.photo_url, ss.photo_base64,
                    ss.team_slug, ss.gender, ss.amount, ss.scraped_at
             FROM skier_snapshots ss
             INNER JOIN (
@@ -193,7 +202,7 @@ def get_skiers_24h_delta() -> list[dict]:
 
     with _conn() as con:
         latest = {r["skier_url"]: dict(r) for r in con.execute("""
-            SELECT ss.id, ss.skier_url, ss.first_name, ss.last_name, ss.photo_url,
+            SELECT ss.id, ss.skier_url, ss.first_name, ss.last_name, ss.photo_url, ss.photo_base64,
                    ss.team_slug, ss.gender, ss.amount, ss.scraped_at
             FROM skier_snapshots ss
             INNER JOIN (

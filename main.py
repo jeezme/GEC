@@ -109,6 +109,27 @@ def _card(cid: str, title: str, body: str, save_filename: str, generated_at: str
     )
 
 
+def _skier_row_html(skier: dict, rank: int, show_delta: bool = False, show_team: bool = False) -> str:
+    first = skier.get("first_name", "")
+    last = skier.get("last_name", "").upper()
+    name = (first + " " + last).strip()
+    team_name = skier.get("team_name", "")
+    amount = skier.get("delta_24h", skier.get("amount", 0)) if show_delta else skier.get("amount", 0)
+    big = rank == 1 and show_delta
+    sz = "56" if big else "40"
+    cls = "skier-row skier-top1" if big else "skier-row"
+    team_span = '<br><span class="skier-team">' + team_name + '</span>' if show_team and team_name else ""
+    photo_html = _img(skier.get("photo_url", ""), sz, ' class="skier-photo"', b64=skier.get("photo_base64") or "")
+    return (
+        '<div class="' + cls + '">'
+        '<span class="skier-rank">' + _medal(rank) + '</span>'
+        + photo_html
+        + '<span class="skier-name">' + name + team_span + '</span>'
+        + '<span class="skier-amount">' + _fmt(amount) + '</span>'
+        '</div>'
+    )
+
+
 def _fmt_don_date(scraped_at: str) -> str:
     try:
         dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
@@ -129,6 +150,10 @@ def _build_html() -> str:
 
     teams_delta = db.get_team_24h_delta()
 
+    skiers = db.get_all_latest_skiers()
+    skiers = [s for s in skiers if s.get("team_slug") in _config_slugs]
+    skiers_delta = db.get_skiers_24h_delta()
+    skiers_delta = [s for s in skiers_delta if s.get("team_slug") in _config_slugs]
 
     recent_dons = db.get_recent_dons(20)
     teams_by_slug = {t["team_slug"]: t for t in teams}
@@ -243,6 +268,28 @@ def _build_html() -> str:
         '<thead><tr><th>Rang</th><th></th><th>Equipe</th><th>+24h</th><th>Total</th><th></th></tr></thead>'
         '<tbody>' + rows5 + '</tbody></table>'
     )
+
+    # CARD 6 - Meilleurs skieurs 24h
+    top10_sk = skiers_delta[:10]
+    for s in top10_sk:
+        s["team_name"] = teams_by_slug.get(s.get("team_slug", ""), {}).get("team_name", "")
+    rows6 = "".join(
+        _skier_row_html(s, i + 1, show_delta=True, show_team=True)
+        for i, s in enumerate(top10_sk)
+    )
+    card6_body = '<div class="skiers-list">' + rows6 + '</div>'
+
+    # CARD 7 - Top 20 skieurs (total)
+    top20_sk = skiers[:20]
+    for s in top20_sk:
+        s["team_name"] = teams_by_slug.get(s.get("team_slug", ""), {}).get("team_name", "")
+    rows7 = ""
+    for i, s in enumerate(top20_sk):
+        row = _skier_row_html(s, i + 1, show_team=True)
+        if i == 0:
+            row = '<div class="skier-gold">' + row + '</div>'
+        rows7 += row
+    card7_body = '<div class="skiers-list">' + rows7 + '</div>'
 
     # CARD 8 - Classement des equipes par montant collecte
     teams_sorted_amount = sorted(
@@ -388,6 +435,16 @@ def _build_html() -> str:
         ".don-empty{color:#888;font-style:italic}"
         ".footer{max-width:800px;margin:0 auto;padding:24px 0;text-align:center;color:#888}"
         ".footer-meta{font-size:.9em}"
+        ".skier-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e0e4ed}"
+        ".skier-row:last-child{border-bottom:none}"
+        ".skier-top1{background:linear-gradient(90deg,#fffbea,transparent);border-radius:8px;padding:10px}"
+        ".skier-rank{font-size:1.3em;min-width:32px}"
+        ".skier-photo{border-radius:50%;object-fit:cover}"
+        ".skier-name{flex:1;font-weight:700;font-size:1.05em;color:#2c3e50;line-height:1.3}"
+        ".skier-team{font-size:.8em;font-weight:400;color:#888;display:block}"
+        ".skier-amount{color:#48cfad;font-weight:900;font-size:1.1em}"
+        ".skiers-list{}"
+        ".skier-gold{background:linear-gradient(90deg,#fffbea,transparent);border-radius:8px;padding:4px}"
         ".obj-summary{margin-top:16px;padding:16px;background:#f8f9fc;border-radius:8px;border:1px solid #e0e4ed}"
         ".obj-summary-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:1em}"
         "@media(max-width:900px){"
@@ -445,6 +502,10 @@ def _build_html() -> str:
               "duel-" + str(today) + ".png", generated_at),
         _card("card3", DUEL_DEPT_1_NAME.upper() + " " + DUEL_DEPT_1 + " vs " + DUEL_DEPT_2_NAME.upper() + " " + DUEL_DEPT_2, card3_body,
               "depts-" + str(today) + ".png", generated_at),
+        _card("card6", "MEILLEURS SKIEURS 24H", card6_body,
+              "24h-skieurs-" + str(today) + ".png", generated_at),
+        _card("card7", chr(127935) + " TOP 20 SKIEURS", card7_body,
+              "top20-skieurs-" + str(today) + ".png", generated_at),
         footer,
         "  </div>",
         '  <script>' + js + '</script>',

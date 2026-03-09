@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 
 import db
 from config import MAIN_URL, TEAMS
+from gender import detect_gender
 
 log = logging.getLogger(__name__)
 
@@ -98,7 +99,48 @@ def scrape_team(team: dict, scraped_at: str):
     db.insert_team(slug, team_name, logo_url, logo_base64, team_type, dept, amount, objectif, scraped_at)
     log.info("  %s : %d / %d", team_name, amount, objectif)
 
+    # Skieurs
+    for item in soup.select("div.list-participant-item"):
+        _scrape_skier_item(item, slug, scraped_at)
+
     time.sleep(1)
+
+
+def _scrape_skier_item(item, team_slug: str, scraped_at: str):
+    link_tag = item.select_one("a[href]")
+    skier_url = link_tag["href"] if link_tag else ""
+    if skier_url and not skier_url.startswith("http"):
+        skier_url = MAIN_URL + skier_url
+
+    title_divs = item.select("div.participant-item-titel div")
+    first_name = title_divs[0].get_text(strip=True) if len(title_divs) > 0 else ""
+    last_name = title_divs[1].get_text(strip=True) if len(title_divs) > 1 else ""
+
+    photo_tag = item.select_one("div.participant-item-img img")
+    photo_url = photo_tag["src"] if photo_tag and photo_tag.get("src") else ""
+    if photo_url and photo_url.startswith("/"):
+        photo_url = MAIN_URL + photo_url
+
+    amount_tag = item.select_one("div.participant-item-total-dont")
+    amount_text = amount_tag.get_text(strip=True) if amount_tag else "0"
+    amount_text = amount_text.replace("collectes", "").replace("collecte", "").replace("\u20ac", "").strip()
+    amount = _parse_amount(amount_text)
+
+    gender = detect_gender(first_name) if first_name else "M"
+
+    photo_base64 = db.get_skier_photo_base64(skier_url) if skier_url else None
+    if photo_url and not photo_base64:
+        try:
+            r = requests.get(photo_url, headers=HEADERS, timeout=10)
+            ext = photo_url.split(".")[-1].split("?")[0].lower()
+            mime = "image/jpeg" if ext in ["jpg", "jpeg"] else "image/png"
+            photo_base64 = "data:" + mime + ";base64," + base64.b64encode(r.content).decode()
+        except Exception:
+            pass
+
+    if skier_url or first_name:
+        db.insert_skier(skier_url, first_name, last_name, photo_url, photo_base64,
+                        team_slug, gender, amount, scraped_at)
 
 
 
