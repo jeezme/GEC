@@ -26,6 +26,8 @@ log.info("Startup purge snapshots >36h : %s", _purged)
 NBSP = " "
 EURO = "€"
 
+_HTML_CACHE = {"html": None}
+
 
 def _fmt(n: int) -> str:
     return f"{n:,}".replace(",", NBSP) + NBSP + EURO
@@ -455,8 +457,12 @@ def _build_html() -> str:
 @app.route("/")
 def index():
     """Génère et retourne le rapport HTML en temps réel."""
+    if _HTML_CACHE["html"] is not None:
+        return _HTML_CACHE["html"]
     try:
-        return _build_html()
+        html = _build_html()
+        _HTML_CACHE["html"] = html
+        return html
     except Exception as exc:
         log.error("Erreur génération HTML : %s", exc, exc_info=True)
         return (
@@ -478,6 +484,8 @@ def run():
             from scraper import scrape_all
             init_db()
             scrape_all()
+            _HTML_CACHE["html"] = None
+            log.info("Cache HTML invalide")
             deleted = purge_old_snapshots(hours=36)
             log.info("Purge snapshots >36h : %s", deleted)
         except Exception as exc:
