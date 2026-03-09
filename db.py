@@ -88,15 +88,6 @@ def get_skier_photo_base64(skier_url: str) -> str | None:
     return row["photo_base64"] if row else None
 
 
-def get_team_logo_base64(slug: str) -> str | None:
-    with _conn() as con:
-        row = con.execute(
-            "SELECT logo_base64 FROM team_snapshots WHERE team_slug = ? AND logo_base64 IS NOT NULL ORDER BY scraped_at DESC LIMIT 1",
-            (slug,)
-        ).fetchone()
-    return row["logo_base64"] if row else None
-
-
 def get_latest_global() -> dict:
     with _conn() as con:
         row = con.execute(
@@ -117,7 +108,7 @@ def get_last_team_amount(slug: str) -> int | None:
 def get_all_latest_teams() -> list[dict]:
     with _conn() as con:
         rows = con.execute("""
-            SELECT ts.id, ts.team_slug, ts.team_name, ts.logo_url, ts.logo_base64, ts.team_type,
+            SELECT ts.id, ts.team_slug, ts.team_name, ts.logo_url, ts.team_type,
                    ts.dept, ts.amount, ts.objectif, ts.scraped_at
             FROM team_snapshots ts
             INNER JOIN (

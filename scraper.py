@@ -86,17 +86,7 @@ def scrape_team(team: dict, scraped_at: str):
     objectif_tags = soup.select("h3.objectif-text")
     objectif = _parse_amount(objectif_tags[-1].get_text()) if objectif_tags else 0
 
-    logo_base64 = db.get_team_logo_base64(slug)
-    if logo_url and not logo_base64:
-        try:
-            r = requests.get(logo_url, headers=HEADERS, timeout=10)
-            ext = logo_url.split(".")[-1].split("?")[0].lower()
-            mime = "image/jpeg" if ext in ["jpg", "jpeg"] else "image/png"
-            logo_base64 = "data:" + mime + ";base64," + base64.b64encode(r.content).decode()
-        except Exception:
-            pass
-
-    db.insert_team(slug, team_name, logo_url, logo_base64, team_type, dept, amount, objectif, scraped_at)
+    db.insert_team(slug, team_name, logo_url, None, team_type, dept, amount, objectif, scraped_at)
     log.info("  %s : %d / %d", team_name, amount, objectif)
 
     # Skieurs

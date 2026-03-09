@@ -69,7 +69,6 @@ def _img(src: str, width: str, extra: str = "", b64: str = "") -> str:
 def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
     pct = _pct(team.get("amount", 0), team.get("objectif", 1) or 1)
     logo = team.get("logo_url", "")
-    logo_b64 = team.get("logo_base64") or ""
     logo_size = {"lg": "100", "md": "64", "sm": "40"}.get(size, "64")
     gold = (
         ' style="background:linear-gradient(135deg,#fffbea 0%,#fff8e1 60%);'
@@ -79,7 +78,7 @@ def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
     return (
         '<div class="team-card rank-' + size + '"' + gold + '>'
         '<div class="team-rank">' + _medal(rank) + '</div>'
-        + _img(logo, logo_size, b64=logo_b64)
+        + _img(logo, logo_size)
         + '<div class="team-name">' + team.get("team_name", "") + '</div>'
         '<div class="team-amount">' + _fmt(team.get("amount", 0)) + '</div>'
         '<div class="progress-bar-wrap">'
@@ -184,12 +183,12 @@ def _build_html() -> str:
     pct_73 = _pct(total_73, total_depts)
     pct_74 = _pct(total_74, total_depts)
     logos_73 = "".join(
-        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"', b64=t.get("logo_base64") or "")
-        for t in teams_73 if t.get("logo_url") or t.get("logo_base64")
+        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
+        for t in teams_73 if t.get("logo_url")
     )
     logos_74 = "".join(
-        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"', b64=t.get("logo_base64") or "")
-        for t in teams_74 if t.get("logo_url") or t.get("logo_base64")
+        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
+        for t in teams_74 if t.get("logo_url")
     )
     card3_body = (
         '<div class="versus-wrap">'
@@ -227,7 +226,7 @@ def _build_html() -> str:
             return '<div class="duel-half">Equipe introuvable</div>'
         pct = _pct(team["amount"], team.get("objectif", 1) or 1)
         glow = " duel-leading" if leading else ""
-        logo_img = _img(team.get("logo_url", ""), "80", b64=team.get("logo_base64") or "")
+        logo_img = _img(team.get("logo_url", ""), "80")
         return (
             '<div class="duel-half' + glow + '">' + logo_img
             + '<div class="duel-name">' + team.get("team_name", "") + '</div>'
@@ -253,7 +252,7 @@ def _build_html() -> str:
     rows5 = ""
     for i, d in enumerate(top10_teams, 1):
         t5 = teams_by_slug.get(d["team_slug"], {})
-        logo_img = _img(t5.get("logo_url", ""), "32", b64=t5.get("logo_base64") or "")
+        logo_img = _img(t5.get("logo_url", ""), "32")
         trend = "↑" if d["delta_24h"] > 0 else "→"
         tc = "#48cfad" if d["delta_24h"] > 0 else "#aaa"
         rows5 += (
@@ -299,7 +298,7 @@ def _build_html() -> str:
     for i, t in enumerate(teams_sorted_amount, 1):
         pct_t = _pct(t.get("amount", 0), t.get("objectif", 1) or 1)
         bar_col = "#27ae60" if pct_t >= 100 else ("#f39c12" if pct_t >= 50 else "#e74c3c")
-        logo_td = _img(t.get("logo_url", ""), "32", b64=t.get("logo_base64") or "")
+        logo_td = _img(t.get("logo_url", ""), "32")
         medal_td = _medal(i) if i <= 3 else '<span style="color:#888;font-size:.9em">' + str(i) + '</span>'
         rows8 += (
             '<tr>'
@@ -456,21 +455,8 @@ def _build_html() -> str:
 
 
     js = (
-        "function saveCard(btn,cardId,filename){"
-        "var el=document.getElementById(cardId);"
-        "btn.disabled=true;btn.textContent='Traitement...';"
-        "btn.style.visibility='hidden';"
-        "requestAnimationFrame(function(){requestAnimationFrame(function(){"
-        "html2canvas(el,{backgroundColor:'#ffffff',scale:2,useCORS:true,allowTaint:true})"
-        ".then(function(canvas){"
-        "var link=document.createElement('a');"
-        "link.download=filename;link.href=canvas.toDataURL('image/png');link.click();"
-        "btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.visibility='visible';"
-        "}).catch(function(err){"
-        "console.error(err);btn.disabled=false;btn.textContent='" + chr(128248) + " Enregistrer';btn.style.visibility='visible';"
-        "});"
-        "});});"
-        "}"
+        "function imgToB64(img){return fetch(img.src).then(function(r){return r.blob()}).then(function(blob){return new Promise(function(resolve){var fr=new FileReader();fr.onload=function(){resolve(fr.result)};fr.readAsDataURL(blob)})});}function saveCard(btn,cardId,filename){var el=document.getElementById(cardId);btn.disabled=true;btn.textContent='Traitement...';btn.style.visibility='hidden';var imgs=Array.from(el.querySelectorAll('img'));var origSrcs=imgs.map(function(i){return i.src});Promise.all(imgs.map(function(img){return imgToB64(img).catch(function(){return img.src})})).then(function(b64s){imgs.forEach(function(img,i){img.src=b64s[i]});return new Promise(function(res){requestAnimationFrame(function(){requestAnimationFrame(res)})});}).then(function(){return html2canvas(el,{backgroundColor:'#ffffff',scale:2,useCORS:false,allowTaint:false});}).then(function(canvas){imgs.forEach(function(img,i){img.src=origSrcs[i]});var link=document.createElement('a');link.download=filename;link.href=canvas.toDataURL('image/png');link.click();btn.disabled=false;btn.textContent='📸 Enregistrer';btn.style.visibility='visible';}).catch(function(err){imgs.forEach(function(img,i){img.src=origSrcs[i]});console.error(err);btn.disabled=false;btn.textContent='📸 Enregistrer';btn.style.visibility='visible';})}"
+
     )
 
     GF = ("https://fonts.googleapis.com/css2"
