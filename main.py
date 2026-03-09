@@ -138,13 +138,13 @@ def _build_html() -> str:
 
     teams = cache.get("teams")
     if teams is None:
-        teams = db.get_all_latest_teams()
+        teams = db.get_all_latest_teams_light()
         cache.set("teams", teams)
     teams = [t for t in teams if t.get("team_slug") in _config_slugs]
 
     skiers = cache.get("skiers")
     if skiers is None:
-        skiers = db.get_all_latest_skiers()
+        skiers = db.get_all_latest_skiers_light()
         cache.set("skiers", skiers)
     skiers = [s for s in skiers if s.get("team_slug") in _config_slugs]
 
