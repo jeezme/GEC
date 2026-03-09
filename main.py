@@ -69,14 +69,6 @@ def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
     )
 
 
-def _save_btn(card_id: str, filename: str) -> str:
-    ap = chr(39)
-    return (
-        '<button class="save-btn" onclick="saveCard(this,' + ap + card_id + ap + ',' + ap + filename + ap + ')">' +
-        chr(128248) + ' Enregistrer l' + ap + 'image</button>'
-    )
-
-
 def _card(cid: str, title: str, body: str, save_filename: str, generated_at: str) -> str:
     return (
         '<div class="card" id="' + cid + '">'
@@ -84,8 +76,7 @@ def _card(cid: str, title: str, body: str, save_filename: str, generated_at: str
         '<h2>' + title + '</h2>'
         '</div>'
         '<div class="card-body">' + body + '</div>'
-        + _save_btn(cid, save_filename)
-        + '</div>'
+        '</div>'
     )
 
 
