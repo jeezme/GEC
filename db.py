@@ -174,7 +174,9 @@ def get_skiers_24h_delta() -> list[dict]:
 
     with _conn() as con:
         latest = {r["skier_url"]: dict(r) for r in con.execute("""
-            SELECT ss.* FROM skier_snapshots ss
+            SELECT ss.id, ss.skier_url, ss.first_name, ss.last_name, ss.photo_url,
+                   ss.team_slug, ss.gender, ss.amount, ss.scraped_at
+            FROM skier_snapshots ss
             INNER JOIN (
                 SELECT skier_url, MAX(scraped_at) AS max_at
                 FROM skier_snapshots GROUP BY skier_url
