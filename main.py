@@ -55,10 +55,12 @@ def _url_to_b64(url: str) -> str:
         return url
 
 
-def _img(src: str, width: str, extra: str = "") -> str:
-    if not src:
+def _img(src: str, width: str, extra: str = "", b64: str = "") -> str:
+    if b64:
+        src = b64
+    elif not src:
         return ""
-    if src.startswith("http"):
+    elif src.startswith("http"):
         src = _url_to_b64(src)
     return '<img src="' + src + '" width="' + width + '"' + extra + ' onerror="this.remove()">'
 
@@ -66,6 +68,7 @@ def _img(src: str, width: str, extra: str = "") -> str:
 def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
     pct = _pct(team.get("amount", 0), team.get("objectif", 1) or 1)
     logo = team.get("logo_url", "")
+    logo_b64 = team.get("logo_base64") or ""
     logo_size = {"lg": "100", "md": "64", "sm": "40"}.get(size, "64")
     gold = (
         ' style="background:linear-gradient(135deg,#fffbea 0%,#fff8e1 60%);'
@@ -75,7 +78,7 @@ def _team_card_html(team: dict, rank: int, size: str = "md") -> str:
     return (
         '<div class="team-card rank-' + size + '"' + gold + '>'
         '<div class="team-rank">' + _medal(rank) + '</div>'
-        + _img(logo, logo_size)
+        + _img(logo, logo_size, b64=logo_b64)
         + '<div class="team-name">' + team.get("team_name", "") + '</div>'
         '<div class="team-amount">' + _fmt(team.get("amount", 0)) + '</div>'
         '<div class="progress-bar-wrap">'
@@ -166,12 +169,12 @@ def _build_html() -> str:
     pct_73 = _pct(total_73, total_depts)
     pct_74 = _pct(total_74, total_depts)
     logos_73 = "".join(
-        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
-        for t in teams_73 if t.get("logo_url")
+        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"', b64=t.get("logo_base64") or "")
+        for t in teams_73 if t.get("logo_url") or t.get("logo_base64")
     )
     logos_74 = "".join(
-        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"')
-        for t in teams_74 if t.get("logo_url")
+        _img(t.get("logo_url", ""), "32", ' title="' + t.get("team_name", "") + '"', b64=t.get("logo_base64") or "")
+        for t in teams_74 if t.get("logo_url") or t.get("logo_base64")
     )
     card3_body = (
         '<div class="versus-wrap">'
@@ -209,7 +212,7 @@ def _build_html() -> str:
             return '<div class="duel-half">Equipe introuvable</div>'
         pct = _pct(team["amount"], team.get("objectif", 1) or 1)
         glow = " duel-leading" if leading else ""
-        logo_img = _img(team.get("logo_url", ""), "80")
+        logo_img = _img(team.get("logo_url", ""), "80", b64=team.get("logo_base64") or "")
         return (
             '<div class="duel-half' + glow + '">' + logo_img
             + '<div class="duel-name">' + team.get("team_name", "") + '</div>'
@@ -235,7 +238,7 @@ def _build_html() -> str:
     rows5 = ""
     for i, d in enumerate(top10_teams, 1):
         t5 = teams_by_slug.get(d["team_slug"], {})
-        logo_img = _img(t5.get("logo_url", ""), "32")
+        logo_img = _img(t5.get("logo_url", ""), "32", b64=t5.get("logo_base64") or "")
         trend = "↑" if d["delta_24h"] > 0 else "→"
         tc = "#48cfad" if d["delta_24h"] > 0 else "#aaa"
         rows5 += (
@@ -259,7 +262,7 @@ def _build_html() -> str:
     for i, t in enumerate(teams_sorted_amount, 1):
         pct_t = _pct(t.get("amount", 0), t.get("objectif", 1) or 1)
         bar_col = "#27ae60" if pct_t >= 100 else ("#f39c12" if pct_t >= 50 else "#e74c3c")
-        logo_td = _img(t.get("logo_url", ""), "32")
+        logo_td = _img(t.get("logo_url", ""), "32", b64=t.get("logo_base64") or "")
         medal_td = _medal(i) if i <= 3 else '<span style="color:#888;font-size:.9em">' + str(i) + '</span>'
         rows8 += (
             '<tr>'
