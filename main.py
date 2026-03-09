@@ -18,15 +18,21 @@ os.makedirs("/data", exist_ok=True)
 
 log = logging.getLogger(__name__)
 
-# Initialisation + purge au démarrage (chaque deploy Render)
-db.init_db()
-_purged = db.purge_old_snapshots(hours=36)
-log.info("Startup purge snapshots >36h : %s", _purged)
-
 NBSP = " "
 EURO = "€"
 
 _HTML_CACHE = {"html": None}
+_initialized = False
+
+@app.before_request
+def _startup():
+    global _initialized
+    if _initialized:
+        return
+    _initialized = True
+    db.init_db()
+    purged = db.purge_old_snapshots(hours=36)
+    log.info("Startup purge snapshots >36h : %s", purged)
 
 
 def _fmt(n: int) -> str:
