@@ -6,6 +6,7 @@ from datetime import date, datetime
 from flask import Flask, jsonify, request
 
 import db
+import gender as _gender
 from config import DUEL_TEAM_1, DUEL_TEAM_2, TEAMS as _CONFIG_TEAMS, DUEL_DEPT_1, DUEL_DEPT_2, DUEL_DEPT_1_NAME, DUEL_DEPT_2_NAME
 
 app = Flask(__name__)
@@ -308,6 +309,62 @@ def _build_html() -> str:
         '</div>'
     )
 
+    # CARD 9 - Classement Filles / Garçons
+    _overrides = _gender.load_overrides()
+    skiers_f = []
+    skiers_m = []
+    for s in skiers:
+        g = _gender.detect_gender(s.get("first_name", ""), _overrides)
+        if g == "F":
+            skiers_f.append(s)
+        else:
+            skiers_m.append(s)
+
+    total_f = sum(s.get("amount", 0) for s in skiers_f)
+    total_m = sum(s.get("amount", 0) for s in skiers_m)
+    total_genders = total_f + total_m or 1
+    pct_f = _pct(total_f, total_genders)
+    pct_m = _pct(total_m, total_genders)
+
+    top_f = sorted(skiers_f, key=lambda s: s.get("amount", 0), reverse=True)[:5]
+    top_m = sorted(skiers_m, key=lambda s: s.get("amount", 0), reverse=True)[:5]
+    for s in top_f + top_m:
+        s["team_name"] = teams_by_slug.get(s.get("team_slug", ""), {}).get("team_name", "")
+
+    def _gender_top_rows(sk_list):
+        return "".join(
+            _skier_row_html(s, i + 1, show_team=True)
+            for i, s in enumerate(sk_list)
+        )
+
+    card9_body = (
+        '<div class="versus-wrap">'
+        '<div class="versus-side">'
+        '<div class="side-title" style="color:#e91e8c">&#9792; FILLES</div>'
+        '<div class="side-total" style="color:#e91e8c">' + _fmt(total_f) + '</div>'
+        '<div class="side-stats">' + str(len(skiers_f)) + ' skieuses</div>'
+        '<div class="duel-top3">' + _gender_top_rows(top_f) + '</div>'
+        '</div>'
+        '<div class="versus-center">'
+        '<div class="dual-bar" style="flex-direction:column;height:auto;gap:8px;background:none">'
+        '<div style="height:16px;background:#e0e4ed;border-radius:4px;overflow:hidden;display:flex;width:100%">'
+        '<div class="dual-bar-f" style="width:' + str(pct_f) + '%"></div>'
+        '<div class="dual-bar-m" style="width:' + str(pct_m) + '%"></div>'
+        '</div></div>'
+        '<div class="dual-pcts">'
+        '<span style="color:#e91e8c">' + str(pct_f) + '%</span>'
+        ' / '
+        '<span style="color:#3498db">' + str(pct_m) + '%</span>'
+        '</div></div>'
+        '<div class="versus-side">'
+        '<div class="side-title" style="color:#3498db">&#9794; GARÇONS</div>'
+        '<div class="side-total" style="color:#3498db">' + _fmt(total_m) + '</div>'
+        '<div class="side-stats">' + str(len(skiers_m)) + ' skieurs</div>'
+        '<div class="duel-top3">' + _gender_top_rows(top_m) + '</div>'
+        '</div>'
+        '</div>'
+    )
+
     if recent_dons:
         don_items = ""
         for d in recent_dons:
@@ -464,6 +521,8 @@ def _build_html() -> str:
               "24h-skieurs-" + str(today) + ".png", generated_at),
         _card("card7", chr(127935) + " TOP 20 SKIEURS", card7_body,
               "top20-skieurs-" + str(today) + ".png", generated_at),
+        _card("card9", "&#9792; FILLES vs GARÇONS &#9794;", card9_body,
+              "filles-garcons-" + str(today) + ".png", generated_at),
         footer,
         "  </div>",
         '  <script>' + js + '</script>',
