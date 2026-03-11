@@ -245,6 +245,17 @@ def purge_old_snapshots(hours: int = 36) -> dict:
     return {"global": g, "teams": t, "skiers": s}
 
 
+def get_team_logo(slug: str) -> dict | None:
+    with _conn() as con:
+        row = con.execute(
+            "SELECT logo_url, logo_base64 FROM team_snapshots WHERE team_slug = ? "
+            "AND (logo_url IS NOT NULL OR logo_base64 IS NOT NULL) "
+            "ORDER BY scraped_at DESC LIMIT 1",
+            (slug,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
 def get_recent_dons(limit: int = 20) -> list[dict]:
     """Detecte les dons via LAG sur snapshots consecutifs. Fusionne equipes + skieurs."""
     with _conn() as con:

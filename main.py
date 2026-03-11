@@ -277,7 +277,7 @@ def _build_html() -> str:
             '<tr>'
             '<td style="text-align:center;font-size:1.2em;width:36px">' + medal_td + '</td>'
             '<td>' + logo_td + '</td>'
-            '<td style="font-weight:700">' + t.get("team_name", "") + '</td>'
+            '<td style="font-weight:700"><a href="/qr/' + t.get("team_slug", "") + '" target="_blank" style="color:inherit;text-decoration:none">' + t.get("team_name", "") + '</a></td>'
             '<td style="color:#48cfad;font-weight:700">' + _fmt(t.get("amount", 0)) + '</td>'
             '<td style="color:#888">' + _fmt(t.get("objectif", 0)) + '</td>'
             '<td style="width:160px">'
@@ -646,6 +646,108 @@ def admin():
         "</body></html>"
     )
     return html
+
+
+@app.route("/qr/<slug>")
+def qr_team(slug):
+    import io
+    import base64 as _b64
+    import qrcode
+    from PIL import Image, ImageDraw, ImageFont
+    from config import MAIN_URL
+
+    team_cfg = next((t for t in _CONFIG_TEAMS if t["slug"] == slug), None)
+    if not team_cfg:
+        return "Équipe non trouvée", 404
+
+    team_name = team_cfg["name"]
+    donate_url = MAIN_URL + "/faire-un-don/" + slug
+
+    # Logo depuis la DB
+    logo_img = None
+    logo_data = db.get_team_logo(slug)
+    if logo_data:
+        try:
+            if logo_data.get("logo_base64"):
+                b64_data = logo_data["logo_base64"]
+                if "base64," in b64_data:
+                    b64_data = b64_data.split("base64,", 1)[1]
+                logo_img = Image.open(io.BytesIO(_b64.b64decode(b64_data))).convert("RGBA")
+            elif logo_data.get("logo_url"):
+                import requests as _req
+                r = _req.get(logo_data["logo_url"], timeout=5)
+                logo_img = Image.open(io.BytesIO(r.content)).convert("RGBA")
+        except Exception:
+            logo_img = None
+    if logo_img:
+        logo_img.thumbnail((60, 60), Image.LANCZOS)
+
+    # Police
+    font_path = None
+    for _fp in [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+    ]:
+        if os.path.exists(_fp):
+            font_path = _fp
+            break
+    try:
+        font_title = ImageFont.truetype(font_path, 22) if font_path else ImageFont.load_default()
+    except Exception:
+        font_title = ImageFont.load_default()
+
+    # QR code
+    qr = qrcode.QRCode(box_size=8, border=3)
+    qr.add_data(donate_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="#1a1d2e", back_color="white").convert("RGBA")
+    qr_w, qr_h = qr_img.size
+
+    # Mesure du texte
+    padding = 20
+    gap = 12
+    dummy = Image.new("RGBA", (1, 1))
+    bbox = ImageDraw.Draw(dummy).textbbox((0, 0), team_name, font=font_title)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+
+    logo_w, logo_h = (logo_img.size if logo_img else (0, 0))
+
+    if logo_img:
+        header_w = logo_w + gap + text_w
+        header_h = max(logo_h, text_h)
+    else:
+        header_w = text_w
+        header_h = text_h
+
+    total_w = max(qr_w + 2 * padding, header_w + 2 * padding)
+    total_h = padding + header_h + padding + qr_h + padding
+
+    img = Image.new("RGB", (total_w, total_h), "white")
+    draw = ImageDraw.Draw(img)
+
+    # En-tête : logo + nom
+    header_x = (total_w - header_w) // 2
+    if logo_img:
+        logo_y = padding + (header_h - logo_h) // 2
+        img.paste(logo_img, (header_x, logo_y), logo_img)
+        text_x = header_x + logo_w + gap
+    else:
+        text_x = header_x
+    text_y = padding + (header_h - text_h) // 2 - bbox[1]
+    draw.text((text_x, text_y), team_name, font=font_title, fill="#1a1d2e")
+
+    # QR code
+    qr_x = (total_w - qr_w) // 2
+    qr_y = padding + header_h + padding
+    img.paste(qr_img.convert("RGB"), (qr_x, qr_y))
+
+    out = io.BytesIO()
+    img.save(out, format="PNG")
+    out.seek(0)
+    from flask import send_file
+    return send_file(out, mimetype="image/png", download_name=slug + "-qr.png")
 
 
 if __name__ == "__main__":
