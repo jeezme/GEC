@@ -366,8 +366,8 @@ def _build_html() -> str:
     )
 
     # CARD 10 - Défi 1000€ (10 mars ~17h → 15 mars ~17h, heure française = UTC+1 → 16h UTC)
-    DEFI_START = "2026-03-10T16:00:00+00:00"
-    DEFI_END   = "2026-03-15T16:00:00+00:00"
+    DEFI_START = "2026-03-10T11:00:00+00:00"
+    DEFI_END   = "2026-03-15T11:00:00+00:00"
     defi_teams = db.get_team_period_delta(DEFI_START, DEFI_END)
     defi_teams = [t for t in defi_teams if t.get("team_slug") in _config_slugs]
     top20_defi = defi_teams[:20]
@@ -385,7 +385,7 @@ def _build_html() -> str:
         )
     if rows10:
         card10_body = (
-            '<p style="color:#888;font-size:.9em;margin-bottom:12px">Du mar. 10/03 ~17h au dim. 15/03 ~17h</p>'
+            '<p style="color:#888;font-size:.9em;margin-bottom:12px">Du mar. 10/03 midi au dim. 15/03 midi</p>'
             '<table class="rank-table">'
             '<thead><tr><th>#</th><th></th><th>Equipe</th><th>Collecté</th></tr></thead>'
             '<tbody>' + rows10 + '</tbody></table>'
