@@ -374,9 +374,12 @@ def _build_html() -> str:
         _defi_current = db.get_team_amounts_at(DEFI_END)
     else:
         _defi_current = {t["team_slug"]: t.get("amount", 0) for t in teams}
+    _defi_excluded = {"ma-chance-moi-aussi", "ma-chance-moi-aussi-2"}
     defi_teams = []
     for t in teams:
         slug = t["team_slug"]
+        if slug in _defi_excluded:
+            continue
         base = _config_depart.get(slug, 0)
         current = _defi_current.get(slug, t.get("amount", 0))
         delta = current - base
