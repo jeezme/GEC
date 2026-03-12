@@ -244,10 +244,10 @@ def get_team_period_delta(start_iso: str, end_iso: str) -> list[dict]:
         baseline_rows = con.execute("""
             SELECT ts.team_slug, ts.amount FROM team_snapshots ts
             INNER JOIN (
-                SELECT team_slug, MAX(scraped_at) AS max_at
-                FROM team_snapshots WHERE scraped_at <= ?
+                SELECT team_slug, MIN(scraped_at) AS min_at
+                FROM team_snapshots WHERE scraped_at >= ?
                 GROUP BY team_slug
-            ) l ON ts.team_slug = l.team_slug AND ts.scraped_at = l.max_at
+            ) l ON ts.team_slug = l.team_slug AND ts.scraped_at = l.min_at
         """, (start_iso,)).fetchall()
 
         latest_rows = con.execute("""
