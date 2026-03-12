@@ -375,10 +375,16 @@ def _build_html() -> str:
     else:
         _defi_current = {t["team_slug"]: t.get("amount", 0) for t in teams}
     _defi_excluded = {"ma-chance-moi-aussi", "ma-chance-moi-aussi-2"}
+    _defi_allowed = set()
+    for _tc in _CONFIG_TEAMS:
+        if _tc["slug"] not in _defi_excluded:
+            _defi_allowed.add(_tc["slug"])
+        if _tc["slug"] == "maped-croc-croc-2":
+            break
     defi_teams = []
     for t in teams:
         slug = t["team_slug"]
-        if slug in _defi_excluded:
+        if slug not in _defi_allowed:
             continue
         base = _config_depart.get(slug, 0)
         current = _defi_current.get(slug, t.get("amount", 0))
