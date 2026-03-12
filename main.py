@@ -365,6 +365,34 @@ def _build_html() -> str:
         '</div>'
     )
 
+    # CARD 10 - Défi 1000€ (10 mars ~17h → 15 mars ~17h, heure française = UTC+1 → 16h UTC)
+    DEFI_START = "2026-03-10T16:00:00+00:00"
+    DEFI_END   = "2026-03-15T16:00:00+00:00"
+    defi_teams = db.get_team_period_delta(DEFI_START, DEFI_END)
+    defi_teams = [t for t in defi_teams if t.get("team_slug") in _config_slugs]
+    top20_defi = defi_teams[:20]
+    rows10 = ""
+    for i, t in enumerate(top20_defi, 1):
+        logo_td = _img(t.get("logo_url", ""), "32")
+        medal_td = _medal(i) if i <= 3 else '<span style="color:#888;font-size:.9em">' + str(i) + '</span>'
+        rows10 += (
+            '<tr>'
+            '<td style="text-align:center;font-size:1.2em;width:36px">' + medal_td + '</td>'
+            '<td>' + logo_td + '</td>'
+            '<td style="font-weight:700">' + t.get("team_name", "") + '</td>'
+            '<td style="color:#f1c40f;font-weight:700">+' + _fmt(t.get("delta_period", 0)) + '</td>'
+            '</tr>'
+        )
+    if rows10:
+        card10_body = (
+            '<p style="color:#888;font-size:.9em;margin-bottom:12px">Du mar. 10/03 ~17h au dim. 15/03 ~17h</p>'
+            '<table class="rank-table">'
+            '<thead><tr><th>#</th><th></th><th>Equipe</th><th>Collecté</th></tr></thead>'
+            '<tbody>' + rows10 + '</tbody></table>'
+        )
+    else:
+        card10_body = '<p style="color:#888;text-align:center;padding:24px">Données non encore disponibles pour cette période.</p>'
+
     if recent_dons:
         don_items = ""
         for d in recent_dons:
@@ -523,6 +551,8 @@ def _build_html() -> str:
               "top20-skieurs-" + str(today) + ".png", generated_at),
         _card("card9", "&#9792; FILLES vs GARÇONS &#9794;", card9_body,
               "filles-garcons-" + str(today) + ".png", generated_at),
+        _card("card10", "&#127942; D" + chr(201) + "FI 1000" + chr(8364), card10_body,
+              "defi1000-" + str(today) + ".png", generated_at),
         footer,
         "  </div>",
         '  <script>' + js + '</script>',
@@ -558,14 +588,12 @@ def run():
 
     def job():
         try:
-            from db import init_db, purge_old_snapshots
+            from db import init_db
             from scraper import scrape_all
             init_db()
             scrape_all()
             _HTML_CACHE["html"] = None
             log.info("Cache HTML invalide")
-            deleted = purge_old_snapshots(hours=36)
-            log.info("Purge snapshots >36h : %s", deleted)
         except Exception as exc:
             log.error("Erreur lors du job : %s", exc, exc_info=True)
 

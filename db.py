@@ -235,6 +235,50 @@ def get_skiers_24h_delta() -> list[dict]:
     return results
 
 
+def get_team_period_delta(start_iso: str, end_iso: str) -> list[dict]:
+    """Delta par équipe entre start_iso et end_iso (ou maintenant si la période est en cours)."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    effective_end = end_iso if now_iso >= end_iso else now_iso
+
+    with _conn() as con:
+        baseline_rows = con.execute("""
+            SELECT ts.team_slug, ts.amount FROM team_snapshots ts
+            INNER JOIN (
+                SELECT team_slug, MAX(scraped_at) AS max_at
+                FROM team_snapshots WHERE scraped_at <= ?
+                GROUP BY team_slug
+            ) l ON ts.team_slug = l.team_slug AND ts.scraped_at = l.max_at
+        """, (start_iso,)).fetchall()
+
+        latest_rows = con.execute("""
+            SELECT ts.team_slug, ts.team_name, ts.logo_url, ts.amount FROM team_snapshots ts
+            INNER JOIN (
+                SELECT team_slug, MAX(scraped_at) AS max_at
+                FROM team_snapshots WHERE scraped_at <= ?
+                GROUP BY team_slug
+            ) l ON ts.team_slug = l.team_slug AND ts.scraped_at = l.max_at
+        """, (effective_end,)).fetchall()
+
+    baseline = {r["team_slug"]: r["amount"] for r in baseline_rows}
+
+    results = []
+    for r in latest_rows:
+        slug = r["team_slug"]
+        current = r["amount"]
+        base = baseline.get(slug, current)
+        delta = current - base
+        if delta > 0:
+            results.append({
+                "team_slug": slug,
+                "team_name": r["team_name"],
+                "logo_url": r["logo_url"],
+                "delta_period": delta,
+                "amount": current,
+            })
+    results.sort(key=lambda x: x["delta_period"], reverse=True)
+    return results
+
+
 def purge_old_snapshots(hours: int = 36) -> dict:
     """Supprime les snapshots plus vieux que `hours` heures."""
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
