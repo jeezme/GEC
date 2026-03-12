@@ -1,7 +1,7 @@
 import logging
 import os
 import threading
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from flask import Flask, jsonify, request
 
@@ -365,11 +365,29 @@ def _build_html() -> str:
         '</div>'
     )
 
-    # CARD 10 - Défi 1000€ (10 mars ~17h → 15 mars ~17h, heure française = UTC+1 → 16h UTC)
-    DEFI_START = "2026-03-10T00:00:00+00:00"
-    DEFI_END   = "2026-03-15T16:00:00+00:00"
-    defi_teams = db.get_team_period_delta(DEFI_START, DEFI_END)
-    defi_teams = [t for t in defi_teams if t.get("team_slug") in _config_slugs]
+    # CARD 10 - Défi 1000€ : delta = montant actuel - collecte_depart (config)
+    # Résultats figés après le 15/03 17h (16h UTC)
+    DEFI_END = "2026-03-15T16:00:00+00:00"
+    _now_iso = datetime.now(timezone.utc).isoformat()
+    _config_depart = {t["slug"]: t.get("collecte_depart", 0) for t in _CONFIG_TEAMS}
+    if _now_iso >= DEFI_END:
+        _defi_current = db.get_team_amounts_at(DEFI_END)
+    else:
+        _defi_current = {t["team_slug"]: t.get("amount", 0) for t in teams}
+    defi_teams = []
+    for t in teams:
+        slug = t["team_slug"]
+        base = _config_depart.get(slug, 0)
+        current = _defi_current.get(slug, t.get("amount", 0))
+        delta = current - base
+        if delta > 0:
+            defi_teams.append({
+                "team_slug": slug,
+                "team_name": t.get("team_name", ""),
+                "logo_url": t.get("logo_url", ""),
+                "delta_period": delta,
+            })
+    defi_teams.sort(key=lambda x: x["delta_period"], reverse=True)
     top20_defi = defi_teams[:20]
     rows10 = ""
     for i, t in enumerate(top20_defi, 1):
@@ -385,13 +403,13 @@ def _build_html() -> str:
         )
     if rows10:
         card10_body = (
-            '<p style="color:#888;font-size:.9em;margin-bottom:12px">Du mar. 10/03 1h du matin au dim. 15/03 17h</p>'
+            '<p style="color:#888;font-size:.9em;margin-bottom:12px">Jusqu\'au dimanche 15/03 à 17h</p>'
             '<table class="rank-table">'
             '<thead><tr><th>#</th><th></th><th>Equipe</th><th>Collecté</th></tr></thead>'
             '<tbody>' + rows10 + '</tbody></table>'
         )
     else:
-        card10_body = '<p style="color:#888;text-align:center;padding:24px">Données non encore disponibles pour cette période.</p>'
+        card10_body = '<p style="color:#888;text-align:center;padding:24px">Données non encore disponibles.</p>'
 
     if recent_dons:
         don_items = ""
