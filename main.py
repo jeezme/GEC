@@ -373,21 +373,27 @@ def _build_html() -> str:
     )
 
 
-    # CARD 12 - Don moyen Filles vs Garçons (données globales actuelles)
-    avg_f = round(total_f / len(skiers_f)) if skiers_f else 0
-    avg_m = round(total_m / len(skiers_m)) if skiers_m else 0
+    # CARD 12 - Don moyen Filles vs Garçons (équipes historiques uniquement)
+    skiers_f_12 = [s for s in skiers_f if s.get("team_slug") in _SKIERS_KEEP_SLUGS]
+    skiers_m_12 = [s for s in skiers_m if s.get("team_slug") in _SKIERS_KEEP_SLUGS]
+    avg_f = round(sum(s.get("amount", 0) for s in skiers_f_12) / len(skiers_f_12)) if skiers_f_12 else 0
+    avg_m = round(sum(s.get("amount", 0) for s in skiers_m_12) / len(skiers_m_12)) if skiers_m_12 else 0
     total_avg = avg_f + avg_m or 1
     pct_avg_f = _pct(avg_f, total_avg)
     pct_avg_m = _pct(avg_m, total_avg)
+    top_f_12 = sorted(skiers_f_12, key=lambda s: s.get("amount", 0), reverse=True)[:5]
+    top_m_12 = sorted(skiers_m_12, key=lambda s: s.get("amount", 0), reverse=True)[:5]
+    for s in top_f_12 + top_m_12:
+        s["team_name"] = teams_by_slug.get(s.get("team_slug", ""), {}).get("team_name", "")
 
     card12_body = (
         '<div class="versus-wrap">'
         '<div class="versus-side">'
         '<div class="side-title" style="color:#e91e8c">&#9792; FILLES</div>'
-        '<div class="side-total" style="color:#e91e8c">' + _fmt(total_f) + '</div>'
-        '<div class="side-stats">' + str(len(skiers_f)) + ' skieuses</div>'
+        '<div class="side-stats">' + str(len(skiers_f_12)) + ' skieuses</div>'
         '<div style="margin-top:12px;font-size:.9em;color:#888">Don moyen</div>'
         '<div style="font-size:1.6em;font-weight:900;color:#e91e8c">' + _fmt(avg_f) + '</div>'
+        '<div class="duel-top3">' + _gender_top_rows(top_f_12) + '</div>'
         '</div>'
         '<div class="versus-center">'
         '<div class="dual-bar" style="flex-direction:column;height:auto;gap:8px;background:none">'
@@ -402,10 +408,10 @@ def _build_html() -> str:
         '</div></div>'
         '<div class="versus-side">'
         '<div class="side-title" style="color:#3498db">&#9794; GARÇONS</div>'
-        '<div class="side-total" style="color:#3498db">' + _fmt(total_m) + '</div>'
-        '<div class="side-stats">' + str(len(skiers_m)) + ' skieurs</div>'
+        '<div class="side-stats">' + str(len(skiers_m_12)) + ' skieurs</div>'
         '<div style="margin-top:12px;font-size:.9em;color:#888">Don moyen</div>'
         '<div style="font-size:1.6em;font-weight:900;color:#3498db">' + _fmt(avg_m) + '</div>'
+        '<div class="duel-top3">' + _gender_top_rows(top_m_12) + '</div>'
         '</div>'
         '</div>'
     )
