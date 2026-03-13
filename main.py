@@ -427,6 +427,72 @@ def _build_html() -> str:
     else:
         card10_body = '<p style="color:#888;text-align:center;padding:24px">Données non encore disponibles.</p>'
 
+
+    # CARD 11 - Défi Filles vs Garçons (13/03 8h → 15/03 minuit, heure française = UTC+1)
+    DEFI_FG_START = "2026-03-13T07:00:00+00:00"
+    DEFI_FG_END   = "2026-03-15T23:00:00+00:00"
+    _fg_skiers = db.get_skier_period_delta(DEFI_FG_START, DEFI_FG_END, _SKIERS_KEEP_SLUGS)
+    for s in _fg_skiers:
+        s["team_name"] = teams_by_slug.get(s.get("team_slug", ""), {}).get("team_name", "")
+
+    _fg_f = [s for s in _fg_skiers if _gender.detect_gender(s.get("first_name", ""), _overrides) == "F"]
+    _fg_m = [s for s in _fg_skiers if _gender.detect_gender(s.get("first_name", ""), _overrides) != "F"]
+    total_fg_f = sum(s.get("delta_period", 0) for s in _fg_f)
+    total_fg_m = sum(s.get("delta_period", 0) for s in _fg_m)
+    total_fg = total_fg_f + total_fg_m or 1
+    pct_fg_f = _pct(total_fg_f, total_fg)
+    pct_fg_m = _pct(total_fg_m, total_fg)
+
+    top_fg_f = sorted(_fg_f, key=lambda s: s.get("delta_period", 0), reverse=True)[:5]
+    top_fg_m = sorted(_fg_m, key=lambda s: s.get("delta_period", 0), reverse=True)[:5]
+
+    def _fg_rows(sk_list):
+        rows = ""
+        for i, s in enumerate(sk_list, 1):
+            amt = s.get("delta_period", 0)
+            if amt <= 0:
+                continue
+            photo_html = _img(s.get("photo_url", ""), "40", ' class="skier-photo"', b64=s.get("photo_base64") or "")
+            name = (s.get("first_name", "") + " " + s.get("last_name", "").upper()).strip()
+            rows += (
+                '<div class="skier-row">' +
+                '<span class="skier-rank">' + _medal(i) + '</span>' +
+                photo_html +
+                '<span class="skier-name">' + name +
+                '<br><span class="skier-team">' + s.get("team_name", "") + '</span></span>' +
+                '<span class="skier-amount">+' + _fmt(amt) + '</span>' +
+                '</div>'
+            )
+        return rows or '<div style="color:#888;font-size:.9em;padding:8px">Aucun don encore.</div>'
+
+    card11_body = (
+        '<p style="color:#888;font-size:.9em;margin-bottom:12px">Du 13/03 8h au 15/03 minuit &mdash; '
+        'équipes historiques uniquement</p>'
+        '<div class="versus-wrap">' +
+        '<div class="versus-side">' +
+        '<div class="side-title" style="color:#e91e8c">&#9792; FILLES</div>' +
+        '<div class="side-total" style="color:#e91e8c">+' + _fmt(total_fg_f) + '</div>' +
+        '<div class="side-stats">' + str(len([s for s in _fg_f if s.get("delta_period",0)>0])) + ' skieuses actives</div>' +
+        '<div class="duel-top3">' + _fg_rows(top_fg_f) + '</div>' +
+        '</div>' +
+        '<div class="versus-center">' +
+        '<div class="dual-bar" style="flex-direction:column;height:auto;gap:8px;background:none">' +
+        '<div style="height:16px;background:#e0e4ed;border-radius:4px;overflow:hidden;display:flex;width:100%">' +
+        '<div class="dual-bar-f" style="width:' + str(pct_fg_f) + '%"></div>' +
+        '<div class="dual-bar-m" style="width:' + str(pct_fg_m) + '%"></div>' +
+        '</div></div>' +
+        '<div class="dual-pcts">' +
+        '<span style="color:#e91e8c">' + str(pct_fg_f) + '%</span> / ' +
+        '<span style="color:#3498db">' + str(pct_fg_m) + '%</span>' +
+        '</div></div>' +
+        '<div class="versus-side">' +
+        '<div class="side-title" style="color:#3498db">&#9794; GARÇONS</div>' +
+        '<div class="side-total" style="color:#3498db">+' + _fmt(total_fg_m) + '</div>' +
+        '<div class="side-stats">' + str(len([s for s in _fg_m if s.get("delta_period",0)>0])) + ' skieurs actifs</div>' +
+        '<div class="duel-top3">' + _fg_rows(top_fg_m) + '</div>' +
+        '</div></div>'
+    )
+
     if recent_dons:
         don_items = ""
         for d in recent_dons:
@@ -587,6 +653,8 @@ def _build_html() -> str:
               "filles-garcons-" + str(today) + ".png", generated_at),
         _card("card10", "&#127942; D" + chr(201) + "FI 1000" + chr(8364), card10_body,
               "defi1000-" + str(today) + ".png", generated_at),
+        _card("card11", "&#9792; DÉFI FILLES vs GARÇONS &#9794;", card11_body,
+              "defi-fg-" + str(today) + ".png", generated_at),
         footer,
         "  </div>",
         '  <script>' + js + '</script>',

@@ -235,6 +235,47 @@ def get_skiers_24h_delta() -> list[dict]:
     return results
 
 
+def get_skier_period_delta(start_iso: str, end_iso: str, team_slugs: set) -> list[dict]:
+    """Delta par skieur entre start_iso et end_iso, limité aux équipes dans team_slugs."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    effective_end = end_iso if now_iso >= end_iso else now_iso
+    slugs_list = list(team_slugs)
+    ph = ",".join("?" * len(slugs_list))
+
+    with _conn() as con:
+        baseline_rows = con.execute(f"""
+            SELECT ss.skier_url, ss.amount FROM skier_snapshots ss
+            INNER JOIN (
+                SELECT skier_url, MIN(scraped_at) AS min_at
+                FROM skier_snapshots WHERE scraped_at >= ? AND team_slug IN ({ph})
+                GROUP BY skier_url
+            ) l ON ss.skier_url = l.skier_url AND ss.scraped_at = l.min_at
+        """, (start_iso, *slugs_list)).fetchall()
+
+        latest_rows = con.execute(f"""
+            SELECT ss.skier_url, ss.first_name, ss.last_name, ss.photo_url, ss.photo_base64,
+                   ss.team_slug, ss.gender, ss.amount
+            FROM skier_snapshots ss
+            INNER JOIN (
+                SELECT skier_url, MAX(scraped_at) AS max_at
+                FROM skier_snapshots WHERE scraped_at <= ? AND team_slug IN ({ph})
+                GROUP BY skier_url
+            ) l ON ss.skier_url = l.skier_url AND ss.scraped_at = l.max_at
+        """, (effective_end, *slugs_list)).fetchall()
+
+    baseline = {r["skier_url"]: r["amount"] for r in baseline_rows}
+    results = []
+    for r in latest_rows:
+        url = r["skier_url"]
+        current = r["amount"]
+        base = baseline.get(url, current)
+        entry = dict(r)
+        entry["delta_period"] = current - base
+        results.append(entry)
+    results.sort(key=lambda x: x["delta_period"], reverse=True)
+    return results
+
+
 def get_team_amounts_at(at_iso: str) -> dict:
     """Retourne le dernier montant par équipe jusqu'à at_iso (slug → amount)."""
     with _conn() as con:
