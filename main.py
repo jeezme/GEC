@@ -630,6 +630,12 @@ def run():
     return jsonify({"status": "lance", "date": str(date.today())}), 200
 
 
+@app.route("/purge-skieurs")
+def purge_skieurs():
+    result = db.purge_old_snapshots()
+    return jsonify({"deleted": result["skiers"]}), 200
+
+
 @app.route("/admin")
 def admin():
     import sqlite3 as _sq
