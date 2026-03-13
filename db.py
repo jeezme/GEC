@@ -249,14 +249,12 @@ def get_team_amounts_at(at_iso: str) -> dict:
     return {r["team_slug"]: r["amount"] for r in rows}
 
 
-def purge_old_snapshots(hours: int = 36) -> dict:
-    """Supprime les snapshots plus vieux que `hours` heures."""
-    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+def purge_old_snapshots() -> dict:
+    """Purge skier_snapshots de plus de 24h. Team et global conservés indéfiniment."""
+    cutoff_skiers = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     with _conn() as con:
-        g = con.execute("DELETE FROM global_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
-        t = con.execute("DELETE FROM team_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
-        s = con.execute("DELETE FROM skier_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
-    return {"global": g, "teams": t, "skiers": s}
+        s = con.execute("DELETE FROM skier_snapshots WHERE scraped_at < ?", (cutoff_skiers,)).rowcount
+    return {"skiers": s}
 
 
 def get_team_logo(slug: str) -> dict | None:

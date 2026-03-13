@@ -615,12 +615,14 @@ def run():
 
     def job():
         try:
-            from db import init_db
+            from db import init_db, purge_old_snapshots
             from scraper import scrape_all
             init_db()
             scrape_all()
             _HTML_CACHE["html"] = None
             log.info("Cache HTML invalide")
+            deleted = purge_old_snapshots()
+            log.info("Purge skiers >24h : %s", deleted)
         except Exception as exc:
             log.error("Erreur lors du job : %s", exc, exc_info=True)
 
