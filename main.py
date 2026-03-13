@@ -372,6 +372,44 @@ def _build_html() -> str:
         '</div>'
     )
 
+
+    # CARD 12 - Don moyen Filles vs Garçons (données globales actuelles)
+    avg_f = round(total_f / len(skiers_f)) if skiers_f else 0
+    avg_m = round(total_m / len(skiers_m)) if skiers_m else 0
+    total_avg = avg_f + avg_m or 1
+    pct_avg_f = _pct(avg_f, total_avg)
+    pct_avg_m = _pct(avg_m, total_avg)
+
+    card12_body = (
+        '<div class="versus-wrap">'
+        '<div class="versus-side">'
+        '<div class="side-title" style="color:#e91e8c">&#9792; FILLES</div>'
+        '<div class="side-total" style="color:#e91e8c">' + _fmt(total_f) + '</div>'
+        '<div class="side-stats">' + str(len(skiers_f)) + ' skieuses</div>'
+        '<div style="margin-top:12px;font-size:.9em;color:#888">Don moyen</div>'
+        '<div style="font-size:1.6em;font-weight:900;color:#e91e8c">' + _fmt(avg_f) + '</div>'
+        '</div>'
+        '<div class="versus-center">'
+        '<div class="dual-bar" style="flex-direction:column;height:auto;gap:8px;background:none">'
+        '<div style="height:16px;background:#e0e4ed;border-radius:4px;overflow:hidden;display:flex;width:100%">'
+        '<div class="dual-bar-f" style="width:' + str(pct_avg_f) + '%"></div>'
+        '<div class="dual-bar-m" style="width:' + str(pct_avg_m) + '%"></div>'
+        '</div></div>'
+        '<div class="dual-pcts">'
+        '<span style="color:#e91e8c">' + str(pct_avg_f) + '%</span>'
+        ' / '
+        '<span style="color:#3498db">' + str(pct_avg_m) + '%</span>'
+        '</div></div>'
+        '<div class="versus-side">'
+        '<div class="side-title" style="color:#3498db">&#9794; GARÇONS</div>'
+        '<div class="side-total" style="color:#3498db">' + _fmt(total_m) + '</div>'
+        '<div class="side-stats">' + str(len(skiers_m)) + ' skieurs</div>'
+        '<div style="margin-top:12px;font-size:.9em;color:#888">Don moyen</div>'
+        '<div style="font-size:1.6em;font-weight:900;color:#3498db">' + _fmt(avg_m) + '</div>'
+        '</div>'
+        '</div>'
+    )
+
     # CARD 10 - Défi 1000€ : delta = montant actuel - collecte_depart (config)
     # Résultats figés après le 15/03 17h (16h UTC)
     DEFI_END = "2026-03-15T16:00:00+00:00"
@@ -651,6 +689,8 @@ def _build_html() -> str:
               "top20-skieurs-" + str(today) + ".png", generated_at),
         _card("card9", "&#9792; FILLES vs GARÇONS &#9794;", card9_body,
               "filles-garcons-" + str(today) + ".png", generated_at),
+        _card("card12", "&#9792; DON MOYEN FILLES vs GARÇONS &#9794;", card12_body,
+              "don-moyen-fg-" + str(today) + ".png", generated_at),
         _card("card10", "&#127942; D" + chr(201) + "FI 1000" + chr(8364), card10_body,
               "defi1000-" + str(today) + ".png", generated_at),
         _card("card11", "&#9792; DÉFI FILLES vs GARÇONS &#9794;", card11_body,
