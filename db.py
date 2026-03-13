@@ -249,11 +249,20 @@ def get_team_amounts_at(at_iso: str) -> dict:
     return {r["team_slug"]: r["amount"] for r in rows}
 
 
-def purge_old_snapshots() -> dict:
-    """Purge skier_snapshots de plus de 24h. Team et global conservés indéfiniment."""
-    cutoff_skiers = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+def purge_old_snapshots(keep_slugs: set | None = None) -> dict:
+    """Purge skier_snapshots de plus de 24h.
+    Si keep_slugs est fourni, les skieurs de ces équipes sont conservés.
+    Team et global conservés indéfiniment."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     with _conn() as con:
-        s = con.execute("DELETE FROM skier_snapshots WHERE scraped_at < ?", (cutoff_skiers,)).rowcount
+        if keep_slugs:
+            placeholders = ",".join("?" * len(keep_slugs))
+            s = con.execute(
+                f"DELETE FROM skier_snapshots WHERE scraped_at < ? AND team_slug NOT IN ({placeholders})",
+                (cutoff, *keep_slugs)
+            ).rowcount
+        else:
+            s = con.execute("DELETE FROM skier_snapshots WHERE scraped_at < ?", (cutoff,)).rowcount
     return {"skiers": s}
 
 

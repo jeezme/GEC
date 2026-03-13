@@ -24,6 +24,13 @@ except Exception as _e:
 NBSP = " "
 EURO = "€"
 
+# Slugs des équipes dont les skieurs sont conservés indéfiniment (jusqu'à maped-croc-croc-2 inclus)
+_SKIERS_KEEP_SLUGS: set = set()
+for _t in _CONFIG_TEAMS:
+    _SKIERS_KEEP_SLUGS.add(_t["slug"])
+    if _t["slug"] == "maped-croc-croc-2":
+        break
+
 _HTML_CACHE = {"html": None}
 
 
@@ -621,7 +628,7 @@ def run():
             scrape_all()
             _HTML_CACHE["html"] = None
             log.info("Cache HTML invalide")
-            deleted = purge_old_snapshots()
+            deleted = purge_old_snapshots(keep_slugs=_SKIERS_KEEP_SLUGS)
             log.info("Purge skiers >24h : %s", deleted)
         except Exception as exc:
             log.error("Erreur lors du job : %s", exc, exc_info=True)
@@ -632,7 +639,7 @@ def run():
 
 @app.route("/purge-skieurs")
 def purge_skieurs():
-    result = db.purge_old_snapshots()
+    result = db.purge_old_snapshots(keep_slugs=_SKIERS_KEEP_SLUGS)
     return jsonify({"deleted": result["skiers"]}), 200
 
 
