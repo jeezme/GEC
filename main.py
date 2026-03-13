@@ -473,7 +473,7 @@ def _build_html() -> str:
 
 
     # CARD 11 - Défi Filles vs Garçons (13/03 8h → 15/03 minuit, heure française = UTC+1)
-    DEFI_FG_START = "2026-03-12T23:01:00+00:00"
+    DEFI_FG_START = "2026-03-13T11:00:00+00:00"
     DEFI_FG_END   = "2026-03-15T23:00:00+00:00"
     _fg_skiers = db.get_skier_period_delta(DEFI_FG_START, DEFI_FG_END, _SKIERS_KEEP_SLUGS)
     for s in _fg_skiers:
@@ -510,7 +510,7 @@ def _build_html() -> str:
         return rows or '<div style="color:#888;font-size:.9em;padding:8px">Aucun don encore.</div>'
 
     card11_body = (
-        '<p style="color:#888;font-size:.9em;margin-bottom:12px">Du 13/03 00h01 au 15/03 minuit &mdash; '
+        '<p style="color:#888;font-size:.9em;margin-bottom:12px">Du 13/03 midi au 15/03 minuit &mdash; '
         'équipes historiques uniquement</p>'
         '<div class="versus-wrap">' +
         '<div class="versus-side">' +
