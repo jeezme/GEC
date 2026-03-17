@@ -314,6 +314,9 @@ def _build_html() -> str:
         '<div style="font-size:1.1em;font-weight:700;color:' + bar_col_all + '">'
         + str(pct_all) + "% de l'objectif global</div>"
         '</div>'
+        '<div style="text-align:center;margin-top:20px">'
+        '<a href="/qr-pdf-all" target="_blank" style="display:inline-block;padding:11px 28px;background:#1a1d2e;color:#48cfad;font-weight:700;border-radius:8px;text-decoration:none;font-size:.95em;border:2px solid #48cfad;letter-spacing:.03em">⬇ Créer QR codes PDF</a>'
+        '</div>'
     )
 
     # CARD 9 - Classement Filles / Garçons
@@ -932,6 +935,160 @@ def qr_team(slug):
     out.seek(0)
     from flask import send_file
     return send_file(out, mimetype="image/png", download_name=slug + "-qr.png")
+
+
+@app.route("/qr-pdf-all")
+def qr_pdf_all():
+    import io
+    import base64 as _b64
+    import qrcode
+    from PIL import Image, ImageDraw, ImageFont
+    from flask import send_file
+    from config import MAIN_URL
+
+    # Équipes historiques : de ma-chance-moi-aussi jusqu'à maped-croc-croc-2 inclus
+    historical_teams = []
+    for t in _CONFIG_TEAMS:
+        historical_teams.append(t)
+        if t["slug"] == "maped-croc-croc-2":
+            break
+
+    # Dimensions page A4 à 200 DPI
+    DPI = 200
+    PAGE_W = int(8.27 * DPI)   # 1654 px
+    PAGE_H = int(11.69 * DPI)  # 2338 px
+    MARGIN = 40
+    COLS = 4
+    ROWS = 6
+    CELL_W = (PAGE_W - 2 * MARGIN) // COLS
+    CELL_H = (PAGE_H - 2 * MARGIN) // ROWS
+    CELL_PAD = 8
+
+    # Chargement de la police une seule fois
+    font_path = None
+    for _fp in [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+    ]:
+        if os.path.exists(_fp):
+            font_path = _fp
+            break
+    try:
+        font_title = ImageFont.truetype(font_path, 22) if font_path else ImageFont.load_default()
+    except Exception:
+        font_title = ImageFont.load_default()
+
+    def _make_qr_img(team_cfg):
+        slug = team_cfg["slug"]
+        team_name = team_cfg["name"]
+        donate_url = MAIN_URL + "/faire-un-don/" + slug
+
+        logo_img = None
+        logo_data = db.get_team_logo(slug)
+        if logo_data:
+            try:
+                if logo_data.get("logo_base64"):
+                    b64_data = logo_data["logo_base64"]
+                    if "base64," in b64_data:
+                        b64_data = b64_data.split("base64,", 1)[1]
+                    logo_img = Image.open(io.BytesIO(_b64.b64decode(b64_data))).convert("RGBA")
+                elif logo_data.get("logo_url"):
+                    import requests as _req
+                    r = _req.get(logo_data["logo_url"], timeout=5)
+                    logo_img = Image.open(io.BytesIO(r.content)).convert("RGBA")
+            except Exception:
+                logo_img = None
+        if logo_img:
+            logo_img.thumbnail((60, 60), Image.LANCZOS)
+
+        qr = qrcode.QRCode(box_size=8, border=3)
+        qr.add_data(donate_url)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="#1a1d2e", back_color="white").convert("RGBA")
+        qr_w, qr_h = qr_img.size
+
+        padding = 20
+        gap = 12
+        dummy = Image.new("RGBA", (1, 1))
+        bbox = ImageDraw.Draw(dummy).textbbox((0, 0), team_name, font=font_title)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        logo_w, logo_h = (logo_img.size if logo_img else (0, 0))
+
+        if logo_img:
+            header_w = logo_w + gap + text_w
+            header_h = max(logo_h, text_h)
+        else:
+            header_w = text_w
+            header_h = text_h
+
+        total_w = max(qr_w + 2 * padding, header_w + 2 * padding)
+        total_h = padding + header_h + padding + qr_h + padding
+
+        img = Image.new("RGB", (total_w, total_h), "white")
+        draw = ImageDraw.Draw(img)
+
+        header_x = (total_w - header_w) // 2
+        if logo_img:
+            logo_y = padding + (header_h - logo_h) // 2
+            img.paste(logo_img, (header_x, logo_y), logo_img)
+            text_x = header_x + logo_w + gap
+        else:
+            text_x = header_x
+        text_y = padding + (header_h - text_h) // 2 - bbox[1]
+        draw.text((text_x, text_y), team_name, font=font_title, fill="#1a1d2e")
+
+        qr_x = (total_w - qr_w) // 2
+        qr_y = padding + header_h + padding
+        img.paste(qr_img.convert("RGB"), (qr_x, qr_y))
+        return img
+
+    max_thumb_w = CELL_W - 2 * CELL_PAD
+    max_thumb_h = CELL_H - 2 * CELL_PAD
+
+    page_images = []
+    for team_cfg in historical_teams:
+        qr_img = _make_qr_img(team_cfg)
+
+        thumb = qr_img.copy()
+        thumb.thumbnail((max_thumb_w, max_thumb_h), Image.LANCZOS)
+        thumb_w, thumb_h = thumb.size
+
+        page = Image.new("RGB", (PAGE_W, PAGE_H), "white")
+
+        # Lignes de découpe légères
+        page_draw = ImageDraw.Draw(page)
+        guide_color = (220, 220, 220)
+        for c in range(1, COLS):
+            x = MARGIN + c * CELL_W
+            page_draw.line([(x, MARGIN), (x, PAGE_H - MARGIN)], fill=guide_color, width=1)
+        for r in range(1, ROWS):
+            y = MARGIN + r * CELL_H
+            page_draw.line([(MARGIN, y), (PAGE_W - MARGIN, y)], fill=guide_color, width=1)
+
+        for idx in range(24):
+            col = idx % COLS
+            row = idx // COLS
+            cell_x = MARGIN + col * CELL_W
+            cell_y = MARGIN + row * CELL_H
+            paste_x = cell_x + (CELL_W - thumb_w) // 2
+            paste_y = cell_y + (CELL_H - thumb_h) // 2
+            page.paste(thumb, (paste_x, paste_y))
+
+        page_images.append(page)
+
+    pdf_buf = io.BytesIO()
+    if page_images:
+        page_images[0].save(
+            pdf_buf,
+            format="PDF",
+            save_all=True,
+            append_images=page_images[1:],
+            resolution=DPI,
+        )
+    pdf_buf.seek(0)
+    return send_file(pdf_buf, mimetype="application/pdf", download_name="qr-codes-equipes.pdf")
 
 
 if __name__ == "__main__":
