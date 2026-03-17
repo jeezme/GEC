@@ -540,6 +540,36 @@ def _build_html() -> str:
         '</div></div>'
     )
 
+    # CARD 13 - Collecte par propriétaire (champ prop dans config)
+    _prop_by_slug = {t["slug"]: (t.get("prop") or "").strip() for t in _CONFIG_TEAMS}
+    _prop_totals: dict = {}
+    _prop_counts: dict = {}
+    for t in teams:
+        slug = t.get("team_slug", "")
+        prop = _prop_by_slug.get(slug, "") or "Libre"
+        amt = t.get("amount", 0)
+        _prop_totals[prop] = _prop_totals.get(prop, 0) + amt
+        _prop_counts[prop] = _prop_counts.get(prop, 0) + 1
+    _prop_sorted = sorted(_prop_totals.items(), key=lambda x: x[1], reverse=True)
+    _PROP_COLORS = ["#6c63ff", "#e91e8c", "#f39c12", "#27ae60", "#3498db", "#e74c3c", "#9b59b6", "#1abc9c"]
+    rows13 = ""
+    for i, (prop, total) in enumerate(_prop_sorted, 1):
+        color = _PROP_COLORS[(i - 1) % len(_PROP_COLORS)]
+        count = _prop_counts.get(prop, 0)
+        rows13 += (
+            '<tr>'
+            '<td style="text-align:center;font-size:1.2em;width:36px">' + (_medal(i) if i <= 3 else '<span style="color:#888;font-size:.9em">' + str(i) + '</span>') + '</td>'
+            '<td style="font-weight:900;font-size:1.1em;color:' + color + '">' + prop + '</td>'
+            '<td style="color:#888;font-size:.9em;text-align:center">' + str(count) + ' équipe' + ('s' if count > 1 else '') + '</td>'
+            '<td style="font-weight:700;color:#48cfad">' + _fmt(total) + '</td>'
+            '</tr>'
+        )
+    card13_body = (
+        '<table class="rank-table">'
+        '<thead><tr><th>#</th><th>Propriétaire</th><th>Équipes</th><th>Total collecté</th></tr></thead>'
+        '<tbody>' + rows13 + '</tbody></table>'
+    )
+
     if recent_dons:
         don_items = ""
         for d in recent_dons:
@@ -704,6 +734,8 @@ def _build_html() -> str:
               "defi1000-" + str(today) + ".png", generated_at),
         _card("card11", "&#9792; DÉFI FILLES vs GARÇONS &#9794;", card11_body,
               "defi-fg-" + str(today) + ".png", generated_at),
+        _card("card13", "&#127970; COLLECTE PAR PROPRI" + chr(201) + "TAIRE", card13_body,
+              "collecte-proprietaire-" + str(today) + ".png", generated_at),
         footer,
         "  </div>",
         '  <script>' + js + '</script>',
