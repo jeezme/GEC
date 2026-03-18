@@ -111,7 +111,8 @@ def _skier_row_html(skier: dict, rank: int, show_delta: bool = False, show_team:
 
 def _fmt_don_date(scraped_at: str) -> str:
     try:
-        dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
+        from datetime import timedelta
+        dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00")) + timedelta(hours=1)
         months = ["jan", "fév", "mars", "avr", "mai", "juin",
                   "juil", "août", "sep", "oct", "nov", "déc"]
         return f"{dt.day:02d} {months[dt.month - 1]} à {dt.hour:02d}h{dt.minute:02d}"
@@ -570,6 +571,17 @@ def _build_html() -> str:
         '<tbody>' + rows13 + '</tbody></table>'
     )
 
+    def _don_highlight(scraped_at: str, team_slug: str) -> bool:
+        """Vrai si le don est entre 17h30 et 20h30 (heure réelle) et équipe historique."""
+        try:
+            from datetime import timedelta
+            dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00")) + timedelta(hours=1)
+            real_minutes = dt.hour * 60 + dt.minute
+            return (team_slug in _SKIERS_KEEP_SLUGS
+                    and 17 * 60 + 30 <= real_minutes <= 20 * 60 + 30)
+        except Exception:
+            return False
+
     if recent_dons:
         don_items = ""
         for d in recent_dons:
@@ -578,8 +590,10 @@ def _build_html() -> str:
             if d.get("source") == "skier" and d.get("team_name"):
                 name += " (" + d["team_name"] + ")"
             date_str = _fmt_don_date(d["scraped_at"])
+            highlight = _don_highlight(d["scraped_at"], d.get("team_slug", ""))
+            cls = "don-item don-highlight" if highlight else "don-item"
             don_items += (
-                '<div class="don-item">'
+                '<div class="' + cls + '">'
                 '<span class="don-amount">+' + amt + '</span>'
                 ' pour ' + name + ' — ' + date_str
                 + '</div>'
@@ -666,6 +680,8 @@ def _build_html() -> str:
         ".don-item:last-child{border-bottom:none}"
         ".don-amount{color:#48cfad;font-weight:700}"
         ".don-empty{color:#888;font-style:italic}"
+        ".don-highlight{background:#fff0f0;border-left:3px solid #e74c3c;padding-left:6px;color:#c0392b;font-weight:700}"
+        ".don-highlight .don-amount{color:#e74c3c}"
         ".footer{max-width:800px;margin:0 auto;padding:24px 0;text-align:center;color:#888}"
         ".footer-meta{font-size:.9em}"
         ".skier-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e0e4ed}"

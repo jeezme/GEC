@@ -323,8 +323,8 @@ def get_recent_dons(limit: int = 100) -> list[dict]:
     with _conn() as con:
         team_dons = con.execute(
             "SELECT 'team' AS source, team_name AS display_name, "
-            "'' AS team_slug, scraped_at, don_amount FROM ("
-            "SELECT team_name, scraped_at, "
+            "team_slug, scraped_at, don_amount FROM ("
+            "SELECT team_name, team_slug, scraped_at, "
             "amount - LAG(amount,1,amount) OVER (PARTITION BY team_slug ORDER BY scraped_at) AS don_amount "
             "FROM team_snapshots) WHERE don_amount > 0 ORDER BY scraped_at DESC LIMIT ?",
             (limit,)
