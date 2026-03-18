@@ -134,7 +134,7 @@ def _build_html() -> str:
     skiers_delta = db.get_skiers_24h_delta()
     skiers_delta = [s for s in skiers_delta if s.get("team_slug") in _config_slugs]
 
-    recent_dons = db.get_recent_dons(20)
+    recent_dons = db.get_recent_dons(100)
     teams_by_slug = {t["team_slug"]: t for t in teams}
 
     g = db.get_latest_global()
