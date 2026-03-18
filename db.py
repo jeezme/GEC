@@ -318,55 +318,6 @@ def get_team_logo(slug: str) -> dict | None:
     return dict(row) if row else None
 
 
-def get_dons_for_period(start_iso: str, end_iso: str, team_slugs: set | None = None, limit: int = 500) -> list[dict]:
-    """Dons détectés (delta positif entre snapshots consécutifs) dans [start_iso, end_iso].
-    Si team_slugs est fourni, filtre sur ces équipes uniquement."""
-    slugs_list = list(team_slugs) if team_slugs else []
-    ph = ",".join("?" * len(slugs_list)) if slugs_list else None
-    slug_clause = f" AND team_slug IN ({ph})" if ph else ""
-
-    with _conn() as con:
-        team_dons = con.execute(
-            "SELECT 'team' AS source, team_name AS display_name, "
-            "'' AS team_slug, scraped_at, don_amount FROM ("
-            "SELECT team_name, scraped_at, "
-            "amount - LAG(amount,1,amount) OVER (PARTITION BY team_slug ORDER BY scraped_at) AS don_amount "
-            f"FROM team_snapshots WHERE 1=1{slug_clause}"
-            ") WHERE don_amount > 0 AND scraped_at BETWEEN ? AND ? "
-            "ORDER BY scraped_at DESC LIMIT ?",
-            (*slugs_list, start_iso, end_iso, limit)
-        ).fetchall()
-
-        skier_dons = con.execute(
-            "SELECT 'skier' AS source, "
-            "(first_name || ' ' || UPPER(last_name)) AS display_name, "
-            "team_slug, scraped_at, don_amount FROM ("
-            "SELECT first_name, last_name, team_slug, scraped_at, "
-            "amount - LAG(amount,1,amount) OVER (PARTITION BY skier_url ORDER BY scraped_at) AS don_amount "
-            f"FROM skier_snapshots WHERE 1=1{slug_clause}"
-            ") WHERE don_amount > 0 AND scraped_at BETWEEN ? AND ? "
-            "ORDER BY scraped_at DESC LIMIT ?",
-            (*slugs_list, start_iso, end_iso, limit)
-        ).fetchall()
-
-        team_names = {}
-        if skier_dons:
-            team_names = {
-                r["team_slug"]: r["team_name"]
-                for r in con.execute(
-                    "SELECT team_slug, team_name FROM team_snapshots GROUP BY team_slug"
-                ).fetchall()
-            }
-
-    combined = [dict(r) for r in team_dons]
-    for r in skier_dons:
-        d = dict(r)
-        d["team_name"] = team_names.get(d.get("team_slug") or "", "")
-        combined.append(d)
-    combined.sort(key=lambda x: x["scraped_at"], reverse=True)
-    return combined[:limit]
-
-
 def get_recent_dons(limit: int = 100) -> list[dict]:
     """Detecte les dons via LAG sur snapshots consecutifs. Fusionne equipes + skieurs."""
     with _conn() as con:
