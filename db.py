@@ -318,7 +318,7 @@ def get_team_logo(slug: str) -> dict | None:
     return dict(row) if row else None
 
 
-def get_recent_dons(limit: int = 20) -> list[dict]:
+def get_recent_dons(limit: int = 100) -> list[dict]:
     """Detecte les dons via LAG sur snapshots consecutifs. Fusionne equipes + skieurs."""
     with _conn() as con:
         team_dons = con.execute(
