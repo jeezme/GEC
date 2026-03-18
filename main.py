@@ -570,36 +570,6 @@ def _build_html() -> str:
         '<tbody>' + rows13 + '</tbody></table>'
     )
 
-    # CARDS 14-17 - Derniers dons par jour (18→21/03) équipes historiques (UTC+1 = UTC-1h)
-    _DAY_DONS_SLUGS = _SKIERS_KEEP_SLUGS
-    _day_ranges = [
-        ("18/03/2026", "card14", "2026-03-17T23:00:00+00:00", "2026-03-18T22:59:59+00:00"),
-        ("19/03/2026", "card15", "2026-03-18T23:00:00+00:00", "2026-03-19T22:59:59+00:00"),
-        ("20/03/2026", "card16", "2026-03-19T23:00:00+00:00", "2026-03-20T22:59:59+00:00"),
-        ("21/03/2026", "card17", "2026-03-20T23:00:00+00:00", "2026-03-21T22:59:59+00:00"),
-    ]
-    _day_cards = []
-    for _day_label, _day_cid, _day_start, _day_end in _day_ranges:
-        _day_dons = db.get_dons_for_period(_day_start, _day_end, _DAY_DONS_SLUGS)
-        if _day_dons:
-            _day_items = ""
-            for d in _day_dons:
-                amt = _fmt(d["don_amount"])
-                name = d["display_name"]
-                if d.get("source") == "skier" and d.get("team_name"):
-                    name += " (" + d["team_name"] + ")"
-                date_str = _fmt_don_date(d["scraped_at"])
-                _day_items += (
-                    '<div class="don-item">'
-                    '<span class="don-amount">+' + amt + '</span>'
-                    ' pour ' + name + ' — ' + date_str
-                    + '</div>'
-                )
-        else:
-            _day_items = '<div class="don-item don-empty">Aucun don détecté sur cette journée.</div>'
-        _day_body = '<div style="max-height:480px;overflow-y:auto">' + _day_items + '</div>'
-        _day_cards.append((_day_cid, "DONS DU " + _day_label, _day_body, _day_cid + "-" + _day_label.replace("/", "-") + ".png"))
-
     if recent_dons:
         don_items = ""
         for d in recent_dons:
@@ -766,7 +736,6 @@ def _build_html() -> str:
               "defi-fg-" + str(today) + ".png", generated_at),
         _card("card13", "&#127970; COLLECTE PAR PROPRI" + chr(201) + "TAIRE", card13_body,
               "collecte-proprietaire-" + str(today) + ".png", generated_at),
-        *[_card(cid, title, body, fname, generated_at) for cid, title, body, fname in _day_cards],
         footer,
         "  </div>",
         '  <script>' + js + '</script>',
